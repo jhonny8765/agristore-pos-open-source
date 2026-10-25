@@ -2445,6 +2445,7 @@ td small {
   }
 }
 .blind-counts .button-row { display:flex; flex-wrap:wrap; gap:12px; margin-block:18px; }
+.blind-counts .button-row .button { transition:none; }
 .blind-counts form { max-width:44rem; }
 .count-start { padding-block:18px; border-block:1px solid var(--line); margin-block:18px; }
 .count-start h3 { margin-top:0; }

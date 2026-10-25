@@ -140,7 +140,7 @@ test("a lot that expires while the basket is open cannot become a completed offl
   await expect(page.getByRole('heading',{name:'Sale saved.',exact:true})).toHaveCount(0);
   await expect(page.locator('.receipt-item')).toHaveCount(1);
   await expect(page.getByLabel('Cash received',{exact:true})).toHaveValue('2000');
-  await page.getByRole('button',{name:'Sync center',exact:true}).click();
+  await page.getByRole('button',{name:/^Sync center(?:\s+\d+)?$/}).click();
   await expect(page.locator('tbody tr')).toHaveCount(0);
 });
 test("pending checkout keeps manual app updates blocked across reload", async ({
@@ -292,7 +292,7 @@ test("a cashier with 100000 retained receipts can reload, sell and export only u
   await page.reload();
   await expect(page.getByRole('button',{name:'Add Grower feeds'})).toBeEnabled();
   await buy(page);
-  await page.getByRole('button',{name:'Sync center',exact:true}).click();
+  await page.getByRole('button',{name:/^Sync center(?:\s+\d+)?$/}).click();
   await expect(page.locator('tbody tr')).toHaveCount(50);
   const downloadPromise=page.waitForEvent('download');
   await page.getByRole('button',{name:'Export recovery file',exact:true}).click();
@@ -302,7 +302,7 @@ test("a cashier with 100000 retained receipts can reload, sell and export only u
   expect(archive.archive.totalRecords).toBe(1);
   expect(archive.sales).toHaveLength(1); expect(archive.sales[0].status).toBe('pending');
   await page.reload();
-  await page.getByRole('button',{name:'Sync center',exact:true}).click();
+  await page.getByRole('button',{name:/^Sync center(?:\s+\d+)?$/}).click();
   await expect(page.locator('tbody tr')).toHaveCount(50);
   const count=await page.evaluate(()=>new Promise<number>((resolve,reject)=>{
     const request=indexedDB.open('agristore-practice-v1');request.onsuccess=()=>{const db=request.result;const tx=db.transaction('sales','readonly');const count=tx.objectStore('sales').count();count.onsuccess=()=>resolve(count.result);tx.oncomplete=()=>db.close();tx.onerror=()=>reject(tx.error);};request.onerror=()=>reject(request.error);
