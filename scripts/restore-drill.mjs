@@ -29,7 +29,7 @@ insert into public.products(id,organization_id,name,sku,base_unit) values('55000
 insert into public.inventory_movements(organization_id,branch_id,product_id,quantity,kind,source_id,created_by) values('55000000-0000-4000-8000-000000000002','55000000-0000-4000-8000-000000000003','55000000-0000-4000-8000-000000000004',14.5,'opening','55000000-0000-4000-8000-000000000005','55000000-0000-4000-8000-000000000001');
 `;
 const id = n => `55000000-0000-4000-8000-${String(n).padStart(12,"0")}`;
-const sql = (input, target="postgres") => run(["psql","-U","postgres","-d",target,"-v","ON_ERROR_STOP=1","-At"], input);
+const sql = (input, target="postgres", user="postgres") => run(["psql","-U",user,"-d",target,"-v","ON_ERROR_STOP=1","-At"], input);
 const lastJSON = output => JSON.parse(output.trim().split("\n").at(-1));
 const login = (actor=1) => `set role authenticated; select set_config('request.jwt.claims','${JSON.stringify({sub:id(actor),session_id:id(actor),role:"authenticated"})}',false);`;
 const ctx = (branch=3) => ({organizationId:id(2),branchId:id(branch)});
@@ -118,7 +118,9 @@ try {
   command('approve_count',{...ctx(),countId:id(18),reason:'TEST restored approval by separate owner'},database);
   command('record_blind_count',{...recount,countId:id(21),observationId:id(23)},database,17);
   command('approve_count',{...ctx(),countId:id(21),reason:'TEST continued first-only count after restoration'},database);
-  assert.throws(()=>sql(`update app_private.count_observations set quantity=1 where id='${id(19)}';`,database),/History is immutable/);
+  // --no-owner restores this private table under supabase_admin. Test the
+  // immutable trigger as its owner; postgres is correctly denied UPDATE here.
+  assert.throws(()=>sql(`update app_private.count_observations set quantity=1 where id='${id(19)}';`,database,"supabase_admin"),/History is immutable/);
   // Resume a real workflow after recovery; data alone is not enough.
   command("disposition_hold",{...release,dispositionId:id(15),reason:"TEST post-restore inspection"},database);
   assert.equal(command("snapshot",{...ctx(),transactionIds:[]},database).stocks[0].quantity,"10.500000");
