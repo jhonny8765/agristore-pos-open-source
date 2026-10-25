@@ -1,0 +1,48 @@
+{
+  "name": "agristore-pos",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @agristore/web",
+    "build": "npm run build -w @agristore/web",
+    "start": "npm run start -w @agristore/web",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "test:db": "supabase test db",
+    "test:db:preflight": "node scripts/local-database-check.mjs",
+    "test:counts:local": "playwright test --config=playwright.counts-local.config.ts",
+    "test:counts:restore": "node scripts/local-count-restore.mjs",
+    "test:restore": "node scripts/restore-drill.mjs",
+    "test:integration": "node scripts/integration-test.mjs",
+    "db:start": "supabase start",
+    "db:reset": "supabase db reset",
+    "check": "npm run typecheck && npm run lint && npm test && npm run build"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
+    "@electric-sql/pglite": "0.5.11",
+    "@electric-sql/pglite-pgtap": "0.0.12",
+    "@playwright/test": "1.64.1",
+    "@types/node": "26.6.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.2.3",
+    "esbuild": "0.28.2",
+    "eslint": "9.39.2",
+    "eslint-config-next": "16.4.2",
+    "fake-indexeddb": "6.2.5",
+    "supabase": "2.121.0",
+    "typescript": "6.0.2",
+    "vitest": "5.0.5"
+  },
+  "license": "MIT"
+}

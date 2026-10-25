@@ -1,0 +1,11 @@
+{
+  "name": "@agristore/domain",
+  "version": "0.1.0",
+  "private": true,
+  "main": "src/index.ts",
+  "dependencies": {
+    "decimal.js": "10.6.0",
+    "zod": "4.6.7"
+  },
+  "license": "MIT"
+}

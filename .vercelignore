@@ -1,0 +1,9 @@
+supabase/
+tests/
+docs/
+.github/
+.impeccable/
+test-results/
+playwright-report/
+coverage/
+*.tsbuildinfo

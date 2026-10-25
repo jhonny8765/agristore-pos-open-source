@@ -1,0 +1,47 @@
+name: Verify AgriStore
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  application:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint -- --max-warnings=0
+      - run: npm test
+      - run: npm run build
+      - name: Install test browser
+        run: bash scripts/install-test-browser.sh
+        timeout-minutes: 6
+      - run: npm run test:e2e
+  database:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - run: npx supabase start -x realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+      - run: npx supabase db lint --local --level warning --fail-on warning
+      - run: npm run test:db
+      - run: npm run test:restore
+      - name: Install test browser
+        run: bash scripts/install-test-browser.sh
+        timeout-minutes: 6
+      - run: npm run test:integration
+      - run: npx supabase stop --no-backup
+        if: always()
