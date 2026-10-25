@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-25T22:27:20.403Z",
+  "title": "Design System: AgriStore POS",
+  "extensions": {
+    "typographyMeta": {
+      "display": {
+        "displayName": "Desktop sign-in statement",
+        "purpose": "The two-line Cash checkout / Traceable stock statement."
+      },
+      "title": {
+        "displayName": "Sign-in form heading",
+        "purpose": "Manrope heading; 24px at the mobile breakpoint."
+      }
+    },
+    "motion": [
+      {
+        "name": "button-state",
+        "value": "background 0.16s ease, color 0.16s ease",
+        "purpose": "Button state feedback; removed under prefers-reduced-motion: reduce."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "auth-single-column",
+        "value": "730px"
+      }
+    ],
+    "focus": [
+      {
+        "name": "control-focus",
+        "value": "3px solid var(--focus)",
+        "offset": "3px",
+        "purpose": "Keyboard focus on authentication controls."
+      }
+    ],
+    "scope": {
+      "sourceFiles": [
+        "apps/web/components/store-brand.tsx",
+        "apps/web/components/store-app.tsx",
+        "apps/web/app/layout.tsx",
+        "apps/web/app/globals.css"
+      ],
+      "referenceImages": [
+        ".impeccable/review/open-source-auth-1440.png",
+        ".impeccable/review/open-source-auth-390.png"
+      ],
+      "description": "Built generic sign-in branding. Existing application guidance is preserved; business workflows and backend behavior are outside this capture."
+    }
+  },
+  "components": [
+    {
+      "name": "Sign-in action",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Full-width authentication action with a trailing arrow.",
+      "html": "<button class=\"ds-auth-primary\" type=\"button\">Sign in<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"17\" height=\"17\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12h14m-7-7 7 7-7 7\"/></svg></button>",
+      "css": ".ds-auth-primary{display:inline-flex;align-items:center;justify-content:space-between;gap:9px;width:100%;min-height:43px;padding:10px 17px;border:1px solid transparent;border-radius:8px;font-family:var(--font-sans);font-size:14px;line-height:1.3;font-weight:650;cursor:pointer;transition:background .16s ease,color .16s ease;background:var(--forest);color:var(--white);}.ds-auth-primary:hover:not(:disabled){background:#285441;}.ds-auth-primary:focus-visible{outline:3px solid var(--focus);outline-offset:3px;}.ds-auth-primary:disabled{opacity:.5;cursor:not-allowed;}@media(prefers-reduced-motion:reduce){.ds-auth-primary{transition:none;}}"
+    },
+    {
+      "name": "Practice checkout action",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "White outline button below the practice-entry rule.",
+      "html": "<button class=\"ds-auth-outline\" type=\"button\">Try practice checkout<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"17\" height=\"17\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12h14m-7-7 7 7-7 7\"/></svg></button>",
+      "css": ".ds-auth-outline{display:inline-flex;align-items:center;justify-content:space-between;gap:9px;width:100%;min-height:43px;padding:10px 17px;border:1px solid transparent;border-radius:8px;font-family:var(--font-sans);font-size:14px;line-height:1.3;font-weight:650;cursor:pointer;transition:background .16s ease,color .16s ease;background:var(--white);color:var(--forest);border-color:#d6ddcf;}.ds-auth-outline:hover:not(:disabled){background:var(--soft);}.ds-auth-outline:focus-visible{outline:3px solid var(--focus);outline-offset:3px;}.ds-auth-outline:disabled{opacity:.5;cursor:not-allowed;}@media(prefers-reduced-motion:reduce){.ds-auth-outline{transition:none;}}"
+    },
+    {
+      "name": "Labeled email field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Persistent compact label and a clearly outlined field.",
+      "html": "<label class=\"ds-auth-field\"><span>Email address</span><input type=\"email\" autocomplete=\"email\" placeholder=\"you@example.com\" required></label>",
+      "css": ".ds-auth-field{display:flex;flex-direction:column;gap:6px;margin-bottom:15px;min-width:0;font-family:var(--font-sans);}.ds-auth-field>span{font-size:12px;font-weight:650;color:#4c5a4e;}.ds-auth-field input{width:100%;min-width:0;min-height:43px;padding:11px 12px;border:1px solid var(--control-line);border-radius:7px;background:var(--white);color:var(--ink);font:14px/1.5 var(--font-sans);caret-color:var(--forest);}.ds-auth-field input::placeholder{color:var(--muted);}.ds-auth-field input:focus-visible{outline:3px solid var(--focus);outline-offset:3px;}.ds-auth-field input:disabled{background:#f2f4ef;}"
+    },
+    {
+      "name": "Desktop project identity",
+      "kind": "custom",
+      "description": "Original inline SVG and project wordmark on the forest story surface.",
+      "html": "<div class=\"ds-brand-story\"><div class=\"ds-brand-desktop\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"192\" height=\"192\" viewBox=\"0 0 192 192\" aria-hidden=\"true\"><rect width=\"192\" height=\"192\" rx=\"40\" fill=\"#173e32\"/><path d=\"M96 148V85M96 110C60 113 43 90 43 60c32 0 54 14 53 50ZM96 89c0-33 18-49 51-48 1 32-16 51-51 48Z\" fill=\"none\" stroke=\"#d9e9c7\" stroke-width=\"10\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg><span>AgriStore<small>POINT OF SALE</small></span></div></div>",
+      "css": ".ds-brand-story{background:var(--forest);padding:48px 9%;color:#f0f5e8;}.ds-brand-desktop{display:flex;align-items:center;gap:11px;font-family:var(--font-display);font-size:24px;font-weight:750;letter-spacing:-.03em;line-height:1.5;}.ds-brand-desktop>svg{width:72px;height:72px;flex-shrink:0;border-radius:4px;background:transparent;}.ds-brand-desktop small{display:block;font-family:var(--font-sans);font-size:10px;font-weight:550;letter-spacing:.08em;margin-top:3px;color:#c5d5bf;}"
+    },
+    {
+      "name": "Mobile project identity",
+      "kind": "custom",
+      "description": "Original SVG with the compact project wordmark above the mobile form.",
+      "html": "<div class=\"ds-brand-paper\"><div class=\"ds-brand-mobile\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"192\" height=\"192\" viewBox=\"0 0 192 192\" aria-hidden=\"true\"><rect width=\"192\" height=\"192\" rx=\"40\" fill=\"#173e32\"/><path d=\"M96 148V85M96 110C60 113 43 90 43 60c32 0 54 14 53 50ZM96 89c0-33 18-49 51-48 1 32-16 51-51 48Z\" fill=\"none\" stroke=\"#d9e9c7\" stroke-width=\"10\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg><span>AgriStore<small>POINT OF SALE</small></span></div></div>",
+      "css": ".ds-brand-paper{background:var(--paper);padding:35px 25px;}.ds-brand-mobile{display:flex;align-items:center;gap:8px;color:var(--forest);font-family:var(--font-display);font-size:22px;font-weight:750;letter-spacing:-.025em;line-height:1.5;}.ds-brand-mobile>svg{width:64px;height:64px;flex-shrink:0;border-radius:4px;background:transparent;}.ds-brand-mobile small{display:block;font-family:var(--font-sans);font-size:10px;font-weight:550;letter-spacing:.08em;margin-top:3px;color:var(--muted);}"
+    },
+    {
+      "name": "Account mode switch",
+      "kind": "button",
+      "description": "Underlined text action beneath the authentication form.",
+      "html": "<button class=\"ds-auth-switch\" type=\"button\">First time here? Create an account</button>",
+      "css": ".ds-auth-switch{background:none;border:0;padding:0;margin-top:20px;color:var(--forest);font-family:var(--font-sans);font-size:12px;font-weight:650;line-height:1.5;text-decoration:underline;text-underline-offset:4px;cursor:pointer;transition:background .16s ease,color .16s ease;}.ds-auth-switch:focus-visible{outline:3px solid var(--focus);outline-offset:3px;}@media(prefers-reduced-motion:reduce){.ds-auth-switch{transition:none;}}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Cooperative Stock Book",
+    "overview": "The existing cooperative stock book is the visual authority. Preserve its operational composition, forest ink, warm paper, white ruled panels and compact controls. This source edition uses the original AgriStore SVG mark and no third-party business photography.\n\nThis document preserves the existing application guidance and captures the implemented generic sign-in identity. The sign-in observations do not certify business workflows or backend behavior.",
+    "keyCharacteristics": [
+      "Forest identity surfaces and warm paper workspaces.",
+      "Compact, labeled controls and ruled records.",
+      "Original project artwork and generic agricultural-store copy."
+    ],
+    "rules": [],
+    "dos": [
+      "Do preserve the incumbent stock-book composition, palette and self-hosted type pairing.",
+      "Do reuse the original SVG and adjacent text identity at the implemented desktop and mobile sizes.",
+      "Do preserve visible labels, keyboard focus and the compact mobile form."
+    ],
+    "donts": [
+      "Don't introduce company photography, company logos or business-specific identity copy into the public edition.",
+      "Don't add a white logo backing or use a raster replacement for the original mark.",
+      "Don't treat this sign-in branding capture as a new palette, illustration system or identity redesign."
+    ]
+  }
+}

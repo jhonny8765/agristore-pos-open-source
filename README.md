@@ -30,6 +30,8 @@ Set the public URL and local anon/publishable key reported by `supabase status` 
 
 ## Verify
 
+See [VALIDATION.md](VALIDATION.md) for the passing full-stack and annual-capacity runs, measured scope and remaining hardware gates.
+
 ```sh
 npm run typecheck
 npm run lint -- --max-warnings=0
