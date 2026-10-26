@@ -1486,6 +1486,15 @@ form > .button {
 .delivery-reversal { margin: 12px 0; padding-block: 12px; border-block: 1px solid var(--line); }
 .delivery-reversal :is(p, small) { overflow-wrap: anywhere; }
 .delivery-reversal .button { white-space: normal; }
+.purchasing-workspace table { table-layout: fixed; white-space: normal; }
+.purchasing-workspace :is(th, td) { white-space: normal; vertical-align: top; }
+@media (max-width: 720px) {
+  .purchasing-workspace .history-table :is(table, tbody, tr, td) { display: block; width: 100%; }
+  .purchasing-workspace .history-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
+  .purchasing-workspace .history-table td { border: 0; padding: 10px 4px; }
+  .purchasing-workspace .history-table td + td { border-top: 1px solid var(--line); }
+  .purchasing-workspace .history-table tr { padding-block: 12px; border-bottom: 1px solid var(--line); }
+}
 .stock-loss-report .form-grid { margin-block: 16px; }
 .loss-report-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-block: 16px; }
 .loss-report-totals { border-block: 1px solid var(--line); margin-block: 20px; padding-block: 12px; }
