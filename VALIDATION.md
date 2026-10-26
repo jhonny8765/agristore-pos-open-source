@@ -1,5 +1,13 @@
 # Verification evidence
 
+## Grams-first checkout follow-up
+
+October 26, 2026. Application source `daa74b2` passed the complete [40265497302](https://github.com/jhonny8765/agristore-pos-open-source/actions/runs/40265497302): 175 unit checks, 22 practice-browser scenarios, 17 real database-connected browser scenarios, 222 database assertions, database lint, type checks, application lint, optimized builds and the disposable backup/restore drill.
+
+Selecting grams on a blank weight field now changes the entry unit without filling in a provisional quantity or permitting checkout. Cleared weights stay uncharged; nonempty invalid entries retain their text and original unit. The new browser cases cover blank/cleared switching, exact 100/250/500 g conversions and fractional kg, offline sale/reload recovery, and grams-first peso entry at a narrow viewport with mandatory weighed confirmation. Existing stock-control and recovery gates passed unchanged. These synthetic checks do not close the real cashier-PC and operational gates below.
+
+## Earlier stock-control and recovery evidence
+
 October 26, 2026, Asia/Manila. Current evidence applies to application source `6c7305c`; later documentation-only commits do not change that source. This is pre-pilot software, not certification of a production installation.
 
 | Check | Result |
