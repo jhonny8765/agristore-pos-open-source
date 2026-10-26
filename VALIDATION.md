@@ -1,5 +1,19 @@
 # Verification evidence
 
+## Purchase orders and delivery inspection
+
+October 27, 2026. Shared application source `7611121` passed both jobs of [40370637294](https://github.com/jhonny8765/agristore-pos-open-source/actions/runs/40370637294): **193 unit checks, 22 practice-browser scenarios, 23 genuine Supabase/Auth browser scenarios, 400 pgTAP assertions, warning-failing database lint, type checks, application lint, optimized builds and the expanded 35-table dump/restore**. Follow-up source `e744c2d` adds the dedicated supplier foreign-key lookup index.
+
+Final index-inclusive source `e744c2d` passed the same complete gate in both jobs of [40372268912](https://github.com/jhonny8765/agristore-pos-open-source/actions/runs/40372268912), including all 400 assertions and the genuine 35-table restore.
+
+Two genuine signed-in flows verify owner request/approval, a separate stock employee's fully rejected receipt with zero stock, mixed saleable/held/rejected/missing quantities, physical held return, owner-only supplier-claim resolution, accessible desktop/390/320 px forms and exact loaded-row CSV. A second flow loses a committed full-rejection response, exports the original pending operation, restores the downloaded JSON in a fresh signed-in browser and retries exactly once. It leaves one receipt, no stock movements and the original unreceived order quantity.
+
+The 70 new database assertions cover authorization, session revocation, exact sack/fractional conversions, whole pieces, expired goods, rejected-lot evidence, immutable history, zero/mixed receiving, over-receipt rollback, supplier-document deduplication across both receipt forms, stale order/claim versions, held-goods effects on remaining orders and bounded pages. Supplier progress does not close a claim or change physical stock. Held goods must be physically resolved before order or claim closure; credit/return notes do not post accounting or automatically receive replacements.
+
+The 35-table restore preserves suppliers, receipts, lots and all six private purchasing tables, in addition to existing sale, count, cost, hold and transfer evidence. Original request retries remain idempotent after restoration, and a new replacement inspection successfully receives against the retained order remainder. Private tables deny direct browser access; claims and stock effects remain transactional. All ledger/projection comparisons pass.
+
+See [the operating guide](docs/purchase-orders-and-deliveries.md). This is a quantity/evidence workflow, not supplier messaging or accounts payable. A dedicated linked receiving-correction screen is not included; the guide explains the owner reconciliation procedure and forbids re-entering the same physical delivery as a correction. Real suppliers, staff rehearsal, scales, cashier-PC endurance/restarts, year-scale purchasing latency and actual production-backup restoration remain operational checks.
+
 ## Documented purchase-cost stock-loss reports
 
 October 26, 2026. Application/test source `5198d21` passed both jobs of [40326154860](https://github.com/jhonny8765/agristore-pos-open-source/actions/runs/40326154860): **186 unit checks, 22 practice-browser scenarios, 21 real Auth/database browser scenarios, 330 database assertions, warning-failing database lint, type checks, application lint, optimized builds and the expanded 26-table restore**.
