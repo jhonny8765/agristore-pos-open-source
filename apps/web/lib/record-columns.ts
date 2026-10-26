@@ -6,7 +6,7 @@ const projections: Readonly<Record<string, string>> = {
   stock_counts:
     "id,organization_id,branch_id,product_id,batch_id,expected::text,counted::text,ledger_revision::text,reason,state,counted_by,approved_by,created_at,count_method",
   inventory_movements:
-    "id::text,organization_id,branch_id,product_id,batch_id,quantity::text,kind,source_id,created_by,created_at",
+    "id::text,organization_id,branch_id,product_id,batch_id,quantity::text,kind,source_id,created_by,created_at,reversal_of::text",
   audit_events:
     "id::text,organization_id,branch_id,actor_id,action,source_id,details,created_at",
 };

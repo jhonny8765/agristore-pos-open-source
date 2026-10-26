@@ -2080,7 +2080,7 @@ export function StoreApp() {
 
           {view === "receiving" && (
             <>
-              {!practice && member.role !== "cashier" && <PurchasingWorkspace key={`purchasing:${member.organizationId}:${branchId}`} db={db} organizationId={member.organizationId} branchId={branchId} branchName={selectedBranch?.name ?? "Selected branch"} actorId={member.userId} products={products} suppliers={(cloud.suppliers ?? []).map(s => ({ id: str(s,"id"), name: str(s,"name") }))} role={member.role} online={online} disabled={busy} revision={historyRevision} execute={fn => run(fn,true,true)} />}
+              {!practice && member.role !== "cashier" && <PurchasingWorkspace key={`purchasing:${member.organizationId}:${branchId}`} db={db} organizationId={member.organizationId} branchId={branchId} branchName={selectedBranch?.name ?? "Selected branch"} actorId={member.userId} products={products} suppliers={(cloud.suppliers ?? []).map(s => ({ id: str(s,"id"), name: str(s,"name") }))} role={member.role} online={online} disabled={busy} revision={historyRevision} reversalBlocked={allPendingCount > 0 || syncing || !!lease || cart.items.length > 0} execute={fn => run(fn,true,true)} />}
               <div className="two-column">
                 <section className="panel">
                   <h2>Quick receipt · saleable goods only</h2>

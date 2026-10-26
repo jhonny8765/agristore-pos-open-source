@@ -400,6 +400,7 @@ export const recoveryOperationIds: Record<string, string> = {
   record_loss_cost: "costEvidenceId",
   create_purchase_order: "purchaseOrderId", purchase_order_event: "orderEventId",
   inspect_delivery: "receiptId", record_delivery_claim: "claimEventId",
+  reverse_delivery: "reversalId",
 };
 const referenceOperations = new Set(["approve_count", "cancel_blind_count"]);
 export type RecoveryActor = Pick<Lease, "organizationId" | "branchId" | "cashierId" | "role">;

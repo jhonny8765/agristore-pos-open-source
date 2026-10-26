@@ -16,3 +16,8 @@ it("exports only loaded lines with exact values, scope and formula-safe text",()
   const csv=inspectionsCsv(rows,"TEST branch","2026-10-27T01:00:00+08:00");
   expect(csv).toContain('"\'=formula"');expect(csv).toContain('"\'+formula"');expect(csv).toContain('"-0.25"');expect(csv).toContain('"TEST branch"');expect(csv.split("\r\n")).toHaveLength(2);
 });
+it("exports original quantities as historical evidence with reversal and correction lineage",()=>{
+  const rows=[{id:"TEST-original",reference:"TEST invoice",supplier_name:"TEST supplier",order_reference:"TEST PO",created_at:"2026-10-27",reversal:{id:"TEST-reversal",reference:"=correction",reason:"TEST owner checked goods"},correctionId:"TEST-corrected",lines:[{product_name:"TEST feed",document_quantity:"1",accepted:"0.25",held:"0.75",rejected:"0",held_remaining:"0"}]}] as DeliveryInspection[];
+  const csv=inspectionsCsv(rows,"TEST branch","2026-10-27");
+  expect(csv).toContain('"reversed"');expect(csv).toContain('"TEST-reversal"');expect(csv).toContain('"\'=correction"');expect(csv).toContain('"TEST-corrected"');expect(csv).toContain('"0.25"');expect(csv).toContain('"Administrative reversal; no supplier settlement"');
+});

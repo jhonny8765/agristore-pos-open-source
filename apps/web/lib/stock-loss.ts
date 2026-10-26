@@ -36,9 +36,9 @@ export function businessDay() {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 }
 export const reconciliationQuantities = [
-  ["balance_start", "Starting book quantity"], ["opening", "Opening imports"], ["purchases", "Purchases"], ["sales", "Sales"], ["refunds", "Saleable returns"],
+  ["balance_start", "Starting book quantity"], ["opening", "Opening imports"], ["purchases", "Purchases / receiving corrections"], ["sales", "Sales"], ["refunds", "Saleable returns"],
   ["transfer_in", "Transfers in"], ["transfer_out", "Transfers out"], ["shortage_adjustments", "Shortage adjustments"], ["surplus_adjustments", "Surplus adjustments"],
-  ["write_offs", "Direct write-offs / use"], ["held_out", "Moved into hold"], ["held_release", "Released from hold"], ["balance_end", "Closing book quantity"],
+  ["write_offs", "Direct write-offs / use"], ["held_out", "Moved into hold / corrections"], ["held_release", "Released from hold"], ["balance_end", "Closing book quantity"],
   ["held_at_end", "Held separately at cutoff"], ["in_transit_out", "Outstanding dispatch at cutoff"],
 ] as const;
 export function lossCsv(report: LossReport, scope: string) {

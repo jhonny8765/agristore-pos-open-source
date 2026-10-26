@@ -85,6 +85,15 @@ const rejectedDelivery={...ctx(),purchaseOrderId:id(41),supplierId:id(40),receip
 const supplierProgress={...ctx(),receiptId:id(44),claimEventId:id(45),expectedVersion:0,outcome:'progress',reference:'TEST-CLAIM-RESTORE',reason:'TEST supplier acknowledged rejected delivery'};
 const supplierResolution={...ctx(),receiptId:id(44),claimEventId:id(46),expectedVersion:1,outcome:'returned',reference:'TEST-RETURN-RESTORE',reason:'TEST owner checked supplier signed rejection'};
 command('create_purchase_order',purchaseOrder);command('purchase_order_event',orderApproval);command('inspect_delivery',rejectedDelivery);command('record_delivery_claim',supplierProgress);command('record_delivery_claim',supplierResolution);
+const reversedOrder={...ctx(6),purchaseOrderId:id(60),supplierId:id(40),reference:'TEST-RESTORE-REVERSED-PO',reason:'TEST untouched receipt correction',items:[{lineId:id(61),productId:id(4),unitId:id(7),quantity:'1'}]};
+command('create_purchase_order',reversedOrder);command('purchase_order_event',{...ctx(6),purchaseOrderId:id(60),orderEventId:id(62),expectedState:'pending',outcome:'approve',reason:'TEST owner approved correction fixture'});
+const mistakenReceipt={...ctx(6),purchaseOrderId:id(60),supplierId:id(40),receiptId:id(63),reference:'TEST-RESTORE-MISTAKEN',reason:'TEST mistaken quantity in saved delivery',items:[{orderLineId:id(61),productId:id(4),unitId:id(7),documentQuantity:'0.5',accepted:'0.5',held:'0',rejected:'0',reason:'TEST original quantity'}]};
+command('inspect_delivery',mistakenReceipt);command('purchase_order_event',{...ctx(6),purchaseOrderId:id(60),orderEventId:id(64),expectedState:'approve',outcome:'close',reason:'TEST owner closed original commitment'});
+const reversePlan=command('delivery_reversal_check',{...ctx(6),receiptId:id(63)});
+const reversal={...ctx(6),receiptId:id(63),reversalId:id(65),expectedLedgerRevision:reversePlan.ledgerRevision,reference:'TEST signed restore correction',reason:'TEST owner physically verified mistaken receiving and synchronized PCs',physicalConfirmed:true,queuesConfirmed:true};
+command('reverse_delivery',reversal);
+const correctedReceipt={...mistakenReceipt,receiptId:id(66),reference:'TEST-RESTORE-CORRECTED',correctsInspectionId:id(63),expectedReversalId:id(65),reason:'TEST linked corrected actual goods',items:[{...mistakenReceipt.items[0],accepted:'0.25',held:'0.25',reason:'TEST actual quarter kilo saleable and quarter kilo held'}]};
+command('inspect_delivery',correctedReceipt);
 // Compare retained content, not just row counts or one projected balance.
 const fingerprints = target => lastJSON(sql(fingerprintSQL(id(2)),target));
 const original = fingerprints("postgres");
@@ -128,6 +137,12 @@ try {
   assert.equal(purchasing.orders[0].lines[0].remaining,'2');assert.equal(purchasing.deliveries[0].claim_state,'resolved');
   assert.equal(command('delivery_claim_history',{...ctx(),receiptId:id(44)},database).rows.length,2);
   assert.equal(Number(sql(`select count(*) from public.inventory_movements where source_id='${id(44)}';`,database).trim()),0);
+  assert.equal(command('reverse_delivery',reversal,database).duplicate,true);
+  assert.equal(command('inspect_delivery',correctedReceipt,database).duplicate,true);
+  const correctedPurchasing=command('purchasing_workspace',ctx(6),database);
+  assert.equal(correctedPurchasing.orders[0].state,'approve');assert.equal(correctedPurchasing.orders[0].lines[0].remaining,'0.5');
+  assert.equal(correctedPurchasing.deliveries.find(d=>d.id===id(63)).reversal.reopenedOrder,true);
+  assert.equal(correctedPurchasing.deliveries.find(d=>d.id===id(66)).correctsInspectionId,id(63));
   const lossReport=command('stock_loss_report',ctx(),database);
   assert.equal(lossReport.totals.documentedLossCentavos,'600');
   assert.equal(lossReport.rows[0].reference,costEvidence.reference);
@@ -141,7 +156,7 @@ try {
   const controls = command("stock_controls",ctx(),database);
   assert.equal(controls.holds.reduce((sum,h)=>sum+Number(h.remaining),0),1);
   const destination = command("snapshot",{...ctx(6),transactionIds:[]},database);
-  assert.equal(destination.stocks[0].quantity,"2.000000");
+  assert.equal(destination.stocks[0].quantity,"2.250000");
   assert.equal(sql(`select (quantity-received_quantity-held_quantity-lost_quantity)::text from public.stock_transfers where id='${id(12)}';`,database).trim(),"0.750000");
   command('record_blind_count',firstCount,database,16);command('record_blind_count',recount,database,17);
   const restoredCounts=command('count_workspace',ctx(),database);
@@ -159,11 +174,15 @@ try {
   command('inspect_delivery',{...rejectedDelivery,receiptId:id(47),reference:'TEST-RESTORE-REPLACEMENT',reason:'TEST working replacement receiving after restoration',items:[{...rejectedDelivery.items[0],documentQuantity:'1',accepted:'1',rejected:'0',reason:'TEST replacement physically accepted'}]},database);
   assert.equal(command('purchasing_workspace',ctx(),database).orders[0].lines[0].remaining,'1');
   assert.equal(command('snapshot',{...ctx(),transactionIds:[]},database).stocks[0].quantity,'11.500000');
+  const correctedHold=sql(`select hold_id from app_private.delivery_inspection_lines where inspection_id='${id(66)}';`,database,'supabase_admin').trim();
+  command('disposition_hold',{...ctx(6),holdId:correctedHold,dispositionId:id(67),quantity:'0.25',disposition:'release',reason:'TEST post-restore inspection of corrected goods'},database);
+  assert.equal(command('snapshot',{...ctx(6),transactionIds:[]},database).stocks[0].quantity,'2.500000');
+  assert.throws(()=>sql(`delete from app_private.delivery_reversals where id='${id(65)}';`,database,'supabase_admin'),/History is immutable/);
   assert.throws(()=>sql(`update app_private.delivery_inspection_lines set rejected=0 where inspection_id='${id(44)}';`,database,'supabase_admin'),/History is immutable/);
   assert.throws(()=>sql(`update public.sales set total=1 where id='${id(9)}';`,database),/History is immutable/);
   assert.equal(Number(sql(`select count(*) from public.branch_inventory i where i.organization_id='${id(2)}' and i.quantity<>(select sum(m.quantity) from public.inventory_movements m where m.organization_id=i.organization_id and m.branch_id=i.branch_id and m.product_id=i.product_id and m.batch_id is not distinct from i.batch_id);`,database).trim()),0);
   console.log(
-    "Restore drill passed: 35 table content fingerprints, approved purchase order and fully rejected delivery with zero stock, retained supplier-claim progress and resolution, working post-restore replacement receiving, purchase-cost evidence and original request replayed once, assigned investigation progress, independent blind counts, original sale/payment/refund, held goods, partial transfer, zero duplicate retry effects, immutable history and zero ledger/projection differences. Disposable CI dump only; production cloud backup not certified.",
+    "Restore drill passed: 36 table content fingerprints, immutable delivery reversal and movement lineage, correctly reopened order and linked corrected receipt, safe original retries and post-restore corrected-hold release, rejected deliveries and supplier claims, replacement receiving, purchase-cost evidence, independent counts, original sale/payment/refund, zero duplicate effects and zero ledger/projection differences. Disposable CI dump only; production cloud backup not certified.",
   );
 } finally {
   run(["dropdb", "-U", "postgres", database]);

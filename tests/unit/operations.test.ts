@@ -69,6 +69,7 @@ describe("online inventory operation recovery", () => {
     expect(await pendingOperations(target)).toHaveLength(0);
   });
   it.each([
+      {action:"reverse_delivery",data:{receiptId:uuid(9),expectedLedgerRevision:"9007199254740993",reference:"TEST signed correction",reason:"TEST owner verified actual goods",physicalConfirmed:true,queuesConfirmed:true},idField:"reversalId"},
       {action:"create_purchase_order",data:{supplierId:uuid(9),reference:"TEST-PO",reason:"TEST order",items:[{lineId:uuid(8),productId:uuid(7),unitId:uuid(6),quantity:"10"}]},idField:"purchaseOrderId"},
       {action:"purchase_order_event",data:{purchaseOrderId:uuid(9),expectedState:"pending",outcome:"approve",reason:"TEST owner approval"},idField:"orderEventId"},
       {action:"inspect_delivery",data:{purchaseOrderId:uuid(9),supplierId:uuid(8),reference:"TEST rejection",reason:"TEST inspected",items:[{productId:uuid(7),unitId:uuid(6),documentQuantity:"10",accepted:"0",held:"0",rejected:"10"}]},idField:"receiptId"},

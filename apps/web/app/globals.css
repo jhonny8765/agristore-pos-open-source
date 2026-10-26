@@ -1483,6 +1483,9 @@ form > .button {
 .purchasing-register-line p { margin: 6px 0; }
 .purchase-claim-history { margin-top: 12px; }
 .purchase-claim-history li { margin-bottom: 12px; }
+.delivery-reversal { margin: 12px 0; padding-block: 12px; border-block: 1px solid var(--line); }
+.delivery-reversal :is(p, small) { overflow-wrap: anywhere; }
+.delivery-reversal .button { white-space: normal; }
 .stock-loss-report .form-grid { margin-block: 16px; }
 .loss-report-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-block: 16px; }
 .loss-report-totals { border-block: 1px solid var(--line); margin-block: 20px; padding-block: 12px; }
