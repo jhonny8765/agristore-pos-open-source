@@ -1,4 +1,5 @@
 export const retainedTables=[
+ 'suppliers','purchase_receipts','product_batches','app_private.purchase_orders','app_private.purchase_order_lines','app_private.purchase_order_events','app_private.delivery_inspections','app_private.delivery_inspection_lines','app_private.supplier_claim_events',
  'app_private.loss_cost_evidence',
  'organizations','branches','staff_memberships','devices','products','product_units','unit_prices','sales','sale_items','payments','sale_reversals','inventory_movements','branch_inventory','cashier_shifts','shift_authorizations','stock_transfers','stock_holds','stock_issues','stock_exceptions','stock_control_events','audit_events','stock_counts','adjustment_approvals','app_private.blind_counts','app_private.count_observations',
 ];

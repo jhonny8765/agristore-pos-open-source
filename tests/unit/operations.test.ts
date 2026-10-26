@@ -69,6 +69,10 @@ describe("online inventory operation recovery", () => {
     expect(await pendingOperations(target)).toHaveLength(0);
   });
   it.each([
+      {action:"create_purchase_order",data:{supplierId:uuid(9),reference:"TEST-PO",reason:"TEST order",items:[{lineId:uuid(8),productId:uuid(7),unitId:uuid(6),quantity:"10"}]},idField:"purchaseOrderId"},
+      {action:"purchase_order_event",data:{purchaseOrderId:uuid(9),expectedState:"pending",outcome:"approve",reason:"TEST owner approval"},idField:"orderEventId"},
+      {action:"inspect_delivery",data:{purchaseOrderId:uuid(9),supplierId:uuid(8),reference:"TEST rejection",reason:"TEST inspected",items:[{productId:uuid(7),unitId:uuid(6),documentQuantity:"10",accepted:"0",held:"0",rejected:"10"}]},idField:"receiptId"},
+      {action:"record_delivery_claim",data:{receiptId:uuid(9),expectedVersion:0,reference:"TEST credit",outcome:"credit",reason:"TEST supplier evidence"},idField:"claimEventId"},
     {action:"record_loss_cost",data:{lossKey:"movement:123",expectedCostId:null,unitId:uuid(10),unitCostCentavos:"125000",zeroCostConfirmed:false,reference:"TEST invoice",reason:"TEST documented acquisition cost"},idField:"costEvidenceId"},
     {action:"assign_stock_exception",data:{exceptionId:uuid(91),assigneeId:uuid(4),dueOn:"2026-11-01",expectedVersion:0,reason:"TEST inspect supplier records"},idField:"followUpId"},
     {action:"note_stock_exception",data:{exceptionId:uuid(91),expectedVersion:1,reason:"TEST inspection still pending"},idField:"followUpId"},

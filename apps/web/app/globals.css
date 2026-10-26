@@ -1469,6 +1469,20 @@ form > .button {
 .stock-loss-report .section-heading { flex-wrap: wrap; align-items: flex-start; }
 .stock-loss-report .button { max-width: 100%; white-space: normal; }
 .stock-loss-report :is(.field, select) { min-width: 0; }
+.purchasing-workspace { display: grid; gap: 24px; margin-bottom: 24px; min-width: 0; }
+.purchasing-workspace :is(.field, select, fieldset, td) { min-width: 0; overflow-wrap: anywhere; }
+.purchasing-workspace .section-heading { flex-wrap: wrap; gap: 12px; }
+.purchasing-workspace .section-heading .button { white-space: normal; }
+.purchasing-workspace summary { cursor: pointer; font-weight: 650; padding: 12px 0; }
+.purchasing-workspace details > form { margin-top: 16px; }
+.purchasing-line { border: 1px solid var(--line); border-radius: 8px; padding: 16px; margin: 0 0 16px; }
+.purchasing-line legend { font-weight: 650; padding: 0 6px; }
+.purchase-actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 12px 0; }
+.purchase-actions .button { white-space: normal; }
+.purchasing-register-line + .purchasing-register-line { border-top: 1px solid var(--line); padding-top: 12px; margin-top: 12px; }
+.purchasing-register-line p { margin: 6px 0; }
+.purchase-claim-history { margin-top: 12px; }
+.purchase-claim-history li { margin-bottom: 12px; }
 .stock-loss-report .form-grid { margin-block: 16px; }
 .loss-report-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-block: 16px; }
 .loss-report-totals { border-block: 1px solid var(--line); margin-block: 20px; padding-block: 12px; }

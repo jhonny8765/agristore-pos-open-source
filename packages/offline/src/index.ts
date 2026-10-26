@@ -398,6 +398,8 @@ export const recoveryOperationIds: Record<string, string> = {
   approve_count: "countId", cancel_blind_count: "countId", create_branch: "newBranchId",
   assign_stock_exception: "followUpId", note_stock_exception: "followUpId",
   record_loss_cost: "costEvidenceId",
+  create_purchase_order: "purchaseOrderId", purchase_order_event: "orderEventId",
+  inspect_delivery: "receiptId", record_delivery_claim: "claimEventId",
 };
 const referenceOperations = new Set(["approve_count", "cancel_blind_count"]);
 export type RecoveryActor = Pick<Lease, "organizationId" | "branchId" | "cashierId" | "role">;

@@ -109,6 +109,7 @@ import { HistoryRegister } from "./history-register";
 import { StorageHealth } from "./storage-health";
 import { StockControls } from "./stock-controls";
 import { StockLossReport } from "./stock-loss-report";
+import { PurchasingWorkspace } from "./purchasing-workspace";
 import { BlindCounts } from "./blind-counts";
 import { preferredBatch, outstandingTransfer } from "../lib/stock-controls";
 import type { HistoryKind } from "../lib/history";
@@ -2079,12 +2080,12 @@ export function StoreApp() {
 
           {view === "receiving" && (
             <>
+              {!practice && member.role !== "cashier" && <PurchasingWorkspace key={`purchasing:${member.organizationId}:${branchId}`} db={db} organizationId={member.organizationId} branchId={branchId} branchName={selectedBranch?.name ?? "Selected branch"} actorId={member.userId} products={products} suppliers={(cloud.suppliers ?? []).map(s => ({ id: str(s,"id"), name: str(s,"name") }))} role={member.role} online={online} disabled={busy} revision={historyRevision} execute={fn => run(fn,true,true)} />}
               <div className="two-column">
                 <section className="panel">
-                  <h2>Receive a delivery</h2>
+                  <h2>Quick receipt · saleable goods only</h2>
                   <p className="muted">
-                    Record actual goods received. Each receipt creates stock
-                    journal entries.
+                    Record an unplanned, fully saleable receipt. For purchase orders, held or rejected goods, use Inspect supplier delivery above. Never record the same delivery in both forms.
                   </p>
                   <form
                     onSubmit={(e) => {
@@ -2170,7 +2171,7 @@ export function StoreApp() {
                     </div>
                     <Button
                       disabled={
-                        busy || !online || practice || member.role === "cashier"
+                        busy || !online || practice || !["owner", "manager"].includes(member.role)
                       }
                     >
                       Receive stock
