@@ -105,7 +105,7 @@ test('operation-only recovery moves a lost count response to a fresh signed-in b
    await restored.screenshot({path:`test-results/count-recovery-${width}.png`,fullPage:true});
   }
   const history=await a.owner.from('audit_events').select('id').eq('source_id',countId).eq('action','record_blind_count');expect(history.error).toBeNull();expect(history.data).toHaveLength(1);
-  const shifts=await a.owner.from('shifts').select('id').eq('organization_id',a.organizationId);expect(shifts.error).toBeNull();expect(shifts.data).toEqual([]);
+  const shifts=await a.owner.from('cashier_shifts').select('id').eq('organization_id',a.organizationId);expect(shifts.error).toBeNull();expect(shifts.data).toEqual([]);
  }finally{await wrongContext.close();await restoredContext.close();}
 });
 
