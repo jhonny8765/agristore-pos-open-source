@@ -39,6 +39,8 @@ function deferred<T>() {
 }
 describe("online inventory operation recovery", () => {
   it.each([
+    {action:"assign_stock_exception",data:{exceptionId:uuid(91),assigneeId:uuid(4),dueOn:"2026-11-01",expectedVersion:0,reason:"TEST inspect supplier records"},idField:"followUpId"},
+    {action:"note_stock_exception",data:{exceptionId:uuid(91),expectedVersion:1,reason:"TEST inspection still pending"},idField:"followUpId"},
     {action:"start_blind_count",data:{productId:uuid(10),batchId:null,reason:"TEST blind count"},idField:"countId"},
     {action:"record_blind_count",data:{countId:uuid(91),stage:"first",quantity:"0.25",notes:"TEST first weight"},idField:"observationId"},
     {action:"record_blind_count",data:{countId:uuid(91),stage:"recount",quantity:"0.25",notes:"TEST independent weight"},idField:"observationId"},

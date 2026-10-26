@@ -8,14 +8,15 @@ import { onlineOperation } from "../lib/operations";
 import { historicalStock } from "../lib/stock-history";
 import { ApprovalForm } from "./approval-form";
 import { Button } from "./ui/button";
+import { StockFollowUps } from "./stock-followups";
 
 type Row = Record<string,unknown>;
 interface Controls { openExceptions: number; exceptions: Row[]; holds: Row[]; issues: Row[] }
 const val = (form: FormData, name: string) => String(form.get(name) ?? "").trim();
 const quantity = (value: unknown) => new Decimal(String(value)).toFixed();
-export function StockControls({db, organizationId, branchId, actorId, products, owner, online, disabled, revision, execute}: {
+export function StockControls({db, organizationId, branchId, actorId, products, owner, canAssign, online, disabled, revision, execute}: {
   db: PosDatabase; organizationId: string; branchId: string; actorId: string; products: Product[];
-  owner: boolean; online: boolean; disabled: boolean; revision: number;
+  owner: boolean; canAssign: boolean; online: boolean; disabled: boolean; revision: number;
   execute: (fn: () => Promise<void>) => Promise<Error | undefined>;
 }) {
   const [data,setData] = useState<Controls>();
@@ -39,21 +40,6 @@ export function StockControls({db, organizationId, branchId, actorId, products, 
     const product = historicalStock(products,row);
     return `${product.name} · ${product.lot} (${product.baseUnit || "base units"})`;
   };
-  const evidence = (row: Row) => {
-    const details=(row.details ?? {}) as Row;
-    const item=(details.item ?? {}) as Row;
-    const product=products.find(p=>p.id===(details.productId ?? item.productId));
-    const lines: string[]=[];
-    if(product) lines.push(product.name);
-    if(details.expected!==undefined) lines.push(`Expected: ${details.expected} · Counted: ${details.counted} ${product?.baseUnit ?? "base units"}`);
-    if(details.dispatched!==undefined) lines.push(`Dispatched: ${details.dispatched} base units`);
-    if(details.quantity!==undefined) lines.push(`Quantity: ${details.quantity} base units`);
-    if(details.reference) lines.push(`Supplier document: ${details.reference}`);
-    if(item.documentQuantity!==undefined) lines.push(`Document quantity: ${item.documentQuantity} · Accepted: ${item.quantity} selling units`);
-    if(Array.isArray(details.flags)) lines.push(`Review: ${details.flags.map(f=>String(f).replaceAll("_"," ")).join(", ")}`);
-    for(const value of [details.reason,details.notes,item.deliveryNotes]) if(value) lines.push(String(value));
-    return lines.join("\n") || "Review the source record and physical goods before recording an outcome.";
-  };
   async function save(action: string, body: Row, idField?: string) {
     if (idField) await onlineOperation(db,actorId,action,{...context,...body},idField);
     else await command(action,{...context,...body});
@@ -61,21 +47,11 @@ export function StockControls({db, organizationId, branchId, actorId, products, 
     await load();
   }
   return <>
+    <StockFollowUps {...{db, organizationId, branchId, actorId, products, owner, canAssign, online, disabled, revision, execute}} />
     <section className="panel">
-      <div className="section-heading"><h2>Stock investigations</h2><Button variant="outline" disabled={!online || disabled} onClick={() => void load()}>Refresh stock controls</Button></div>
-      <p>Unresolved differences stay here until the owner records the evidence and outcome. Confirming an adjustment does not prove why stock was missing.</p>
+      <div className="section-heading"><h2>Held goods · excluded from saleable stock</h2><Button variant="outline" disabled={!online || disabled} onClick={() => void load()}>Refresh stock controls</Button></div>
       {feedback && <p role="status" className="notice success">{feedback}</p>}
       {error && <p role="alert" className="notice error">{error}</p>}
-      {!online && <p className="notice">Reconnect to see current investigations and held goods.</p>}
-      {!data ? <p role="status">{error ? "Stock controls could not be loaded. Reconnect and use Refresh stock controls." : !online ? "Current stock controls are unavailable offline." : "Loading stock controls…"}</p> : <>
-        <p role="status">{data.openExceptions} open investigations. Showing the oldest {data.exceptions.length}; older unresolved cases are never removed by new activity.</p>
-        <div className="table-wrap history-table stock-control-table" role="region" aria-label="Open stock investigations" tabIndex={0}><table role="table"><thead><tr><th scope="col">Issue / evidence</th><th scope="col">Owner action</th></tr></thead><tbody>
-          {data.exceptions.map(e => <tr key={String(e.id)}><td><strong>{String(e.kind).replaceAll("_"," ")}</strong><small>{new Date(String(e.created_at)).toLocaleString("en-PH",{timeZone:"Asia/Manila"})} · Source: {String(e.source_id)}</small><details><summary>Recorded details</summary><p className="stock-evidence">{evidence(e)}</p></details></td><td>{owner ? <ApprovalForm action="Resolve investigation" label="Evidence and outcome" description="Record what was checked, the cause if established, and the corrective action. This does not change stock." confirmLabel="Record resolution" disabled={disabled || !online} onConfirm={reason => execute(() => save("resolve_stock_exception",{exceptionId:e.id,reason}))} /> : "Owner review required"}</td></tr>)}
-        </tbody></table></div>
-      </>}
-    </section>
-    <section className="panel">
-      <h2>Held goods · excluded from saleable stock</h2>
       <p>Keep these goods physically separate. Inspect them before release; expired goods cannot be released for sale.</p>
       {!data?.holds.length ? <p>No held goods loaded.</p> : <div className="table-wrap history-table stock-control-table" role="region" aria-label="Held stock" tabIndex={0}><table role="table"><thead><tr><th scope="col">Product / lot / reason</th><th scope="col" className="numeric">Still held</th><th scope="col">Outcome</th></tr></thead><tbody>
         {data.holds.map(h => <tr key={String(h.id)}><td>{label(h)}<small>{String(h.reason)}</small></td><td className="numeric" data-label="Still held: ">{quantity(h.remaining)}</td><td>{owner ? <ApprovalForm action="Record held-goods outcome" label="Inspection / disposition reason" description="Release only goods verified saleable. Disposal or supplier return does not deduct saleable stock again." confirmLabel="Record outcome" disabled={disabled || !online} onConfirm={(reason,f) => execute(() => save("disposition_hold",{holdId:h.id,quantity:val(f,"quantity"),disposition:val(f,"disposition"),reason},"dispositionId"))}>

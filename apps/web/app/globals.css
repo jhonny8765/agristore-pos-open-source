@@ -1459,6 +1459,10 @@ form > .button {
 .stock-control-table :is(th, td).numeric { width: 12%; }
 .stock-control-table .approval-form { width: 100%; }
 .stock-control-table .button { white-space: normal; }
+.followup-actions { display: grid; gap: 12px; justify-items: start; }
+.followup-actions > .approval-form { min-width: 0; }
+.followup-filter { max-width: 32rem; margin-block: 16px; }
+.stock-followups .form-grid { margin-block: 16px; }
 @media (max-width: 720px) {
   .stock-control-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
   .stock-control-table :is(tbody, tr, td) { display: block; width: 100%; }

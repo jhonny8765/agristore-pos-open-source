@@ -68,6 +68,10 @@ const recount={...ctx(),countId:id(18),stage:'recount',quantity:'10.25',notes:'T
 command('record_blind_count',firstCount,'postgres',16);command('record_blind_count',recount,'postgres',17);
 command('start_blind_count',{...countBody,countId:id(21)},'postgres',16);
 command('record_blind_count',{...firstCount,countId:id(21),observationId:id(22)},'postgres',16);
+const followupException=sql(`select id from public.stock_exceptions where organization_id='${id(2)}' and source_id='${id(11)}' and kind='stock_issue';`).trim();
+const assignment={...ctx(),exceptionId:followupException,assigneeId:id(16),dueOn:'2026-10-01',expectedVersion:0,followUpId:id(24),reason:'TEST restore assigned investigation'};
+const progress={...ctx(),exceptionId:followupException,expectedVersion:1,followUpId:id(25),reason:'TEST evidence retained while still unresolved'};
+command('assign_stock_exception',assignment);command('note_stock_exception',progress,'postgres',16);
 // Compare retained content, not just row counts or one projected balance.
 const fingerprints = target => lastJSON(sql(fingerprintSQL(id(2)),target));
 const original = fingerprints("postgres");
@@ -103,6 +107,11 @@ try {
   command("refund_sale",refund,database);
   assert.equal(command("receive_transfer",receipt,database).duplicate,true);
   command("disposition_hold",release,database);
+  assert.equal(command('assign_stock_exception',assignment,database).duplicate,true);
+  assert.equal(command('note_stock_exception',progress,database,16).duplicate,true);
+  const restoredFollowup=command('stock_followups',ctx(),database).cases.find(r=>r.id===followupException);
+  assert.equal(restoredFollowup.assigned_user_id,id(16));assert.equal(restoredFollowup.due_on,assignment.dueOn);
+  assert.equal(restoredFollowup.progress_note,progress.reason);assert.equal(restoredFollowup.follow_up_version,2);
   // Idempotent retries and reads must not change immutable financial/stock rows.
   const retried = fingerprints(database);
   for (const table of tables.filter(t=>t!=="devices")) assert.deepEqual(retried[table],original[table],`Restored retry changed ${table}`);
@@ -127,7 +136,7 @@ try {
   assert.throws(()=>sql(`update public.sales set total=1 where id='${id(9)}';`,database),/History is immutable/);
   assert.equal(Number(sql(`select count(*) from public.branch_inventory i where i.organization_id='${id(2)}' and i.quantity<>(select sum(m.quantity) from public.inventory_movements m where m.organization_id=i.organization_id and m.branch_id=i.branch_id and m.product_id=i.product_id and m.batch_id is not distinct from i.batch_id);`,database).trim()),0);
   console.log(
-    "Restore drill passed: 25 table content fingerprints, blind sealed pairs and first-only observations resumed with independent owner approval, original sale/payment and linked refund, held goods, approved damage, partial transfer with 0.75 kg still in transit, zero duplicate retry effects, working post-restore disposition, immutable history, and zero ledger/projection differences. Disposable CI dump only; production cloud backup not certified.",
+    "Restore drill passed: 25 table content fingerprints, assigned overdue investigation and progress replayed once, blind sealed pairs and first-only observations resumed with independent owner approval, original sale/payment and linked refund, held goods, approved damage, partial transfer with 0.75 kg still in transit, zero duplicate retry effects, working post-restore disposition, immutable history, and zero ledger/projection differences. Disposable CI dump only; production cloud backup not certified.",
   );
 } finally {
   run(["dropdb", "-U", "postgres", database]);

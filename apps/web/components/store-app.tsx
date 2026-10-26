@@ -1986,7 +1986,7 @@ export function StoreApp() {
                   />
                 )}
               </section>
-              {!practice && member.role !== "cashier" && <StockControls key={`${member.organizationId}:${branchId}`} db={db} organizationId={member.organizationId} branchId={branchId} actorId={member.userId} products={products} owner={isOwner} online={online} disabled={busy} revision={historyRevision} execute={fn => run(fn,true,true)} />}
+              {!practice && member.role !== "cashier" && <StockControls key={`${member.organizationId}:${branchId}`} db={db} organizationId={member.organizationId} branchId={branchId} actorId={member.userId} products={products} owner={isOwner} canAssign={isOwner || member.role === "manager"} online={online} disabled={busy} revision={historyRevision} execute={fn => run(fn,true,true)} />}
               {isOwner && (
                 <div className="two-column">
                   <section className="panel">
