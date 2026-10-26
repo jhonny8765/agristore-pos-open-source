@@ -11,7 +11,7 @@ This edition contains generic branding and synthetic fixtures. It includes no pr
 - Append-only stock movements, purchasing, lots/expiry, separate transfer dispatch/receipt, held stock and owner-approved stock issues.
 - Owner-only [delivery reversals and linked corrections](docs/delivery-reversals.md) for untouched saved inspections, with exact stock/hold/order effects and original-request recovery. Later activity and deliberate partial order closures block automatic reversal.
 - Blind physical counts: two separate counter accounts seal observations; an owner who entered neither approves. Disagreement, intervening stock movements, revoked access and self-approval block adjustments. Original evidence remains immutable.
-- Cash reconciliation, full financial refunds with separate physical-return disposition, paginated records and recovery exports.
+- Cash reconciliation, [selected-quantity cash refunds](docs/partial-refunds.md), full refunds with separate physical-return disposition, paginated records and recovery exports.
 - Branch/organization permissions, current-session checks, RPC-only mutations and private privileged functions.
 
 This is pre-pilot software. Actual cashier-PC storage/endurance, Windows reboot recovery, scale/printer operation, verified opening stock and an actual cloud-backup restore still require acceptance. Official tax invoices, full accounting, credit and electronic payments are excluded. Open source does not establish production readiness or guarantee prevention of theft or losses.

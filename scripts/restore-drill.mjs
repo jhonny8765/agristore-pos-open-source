@@ -204,7 +204,7 @@ try {
   assert.throws(()=>sql(`update public.sales set total=1 where id='${id(9)}';`,database),/History is immutable/);
   assert.equal(Number(sql(`select count(*) from public.branch_inventory i where i.organization_id='${id(2)}' and i.quantity<>(select sum(m.quantity) from public.inventory_movements m where m.organization_id=i.organization_id and m.branch_id=i.branch_id and m.product_id=i.product_id and m.batch_id is not distinct from i.batch_id);`,database).trim()),0);
   console.log(
-    "Restore drill passed: 36 table content fingerprints, partial-refund cash/stock and remaining allocations, immutable delivery reversal and movement lineage, correctly reopened order and linked corrected receipt, safe original retries and post-restore corrected-hold release, rejected deliveries and supplier claims, replacement receiving, purchase-cost evidence, independent counts, original sale/payment/refund, zero duplicate effects and zero ledger/projection differences. Disposable CI dump only; production cloud backup not certified.",
+    `Restore drill passed: ${tables.length} table content fingerprints, partial-refund cash/stock and remaining allocations, immutable delivery reversal and movement lineage, correctly reopened order and linked corrected receipt, safe original retries and post-restore corrected-hold release, rejected deliveries and supplier claims, replacement receiving, purchase-cost evidence, independent counts, original sale/payment/refund, zero duplicate effects and zero ledger/projection differences. Disposable CI dump only; production cloud backup not certified.`,
   );
 } finally {
   run(["dropdb", "-U", "postgres", database]);
