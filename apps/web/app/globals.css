@@ -338,7 +338,7 @@ form > .button {
   object-fit: contain;
   flex-shrink: 0;
   border-radius: 4px;
-  background: transparent;
+  background: white;
 }
 .wordmark small,
 .small-brand small {
@@ -1463,6 +1463,9 @@ form > .button {
 .followup-actions > .approval-form { min-width: 0; }
 .followup-filter { max-width: 32rem; margin-block: 16px; }
 .stock-followups .form-grid { margin-block: 16px; }
+.stock-followups .section-heading { flex-wrap: wrap; align-items: flex-start; }
+.stock-followups .section-heading .button { max-width: 100%; white-space: normal; text-align: left; }
+.stock-followups :is(.field, select) { min-width: 0; }
 @media (max-width: 720px) {
   .stock-control-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
   .stock-control-table :is(tbody, tr, td) { display: block; width: 100%; }

@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import Decimal from "decimal.js";
 import type { PosDatabase } from "@agristore/offline";
 import type { Product } from "@agristore/domain";
@@ -29,6 +29,7 @@ export function StockFollowUps({ db, organizationId, branchId, actorId, products
   const [filter, setFilter] = useState("all"), [expiryFilter, setExpiryFilter] = useState("all"), [horizon, setHorizon] = useState("30");
   const [loading, setLoading] = useState(false), [error, setError] = useState(""), [feedback, setFeedback] = useState("");
   const generation = useRef(0);
+  const labelId = useId();
   const invalidate = useCallback(() => { generation.current++; }, []);
   const load = useCallback(async (mode: "reset" | "cases" | "expiry" = "reset", cursor?: Cursor) => {
     const request = ++generation.current;
@@ -63,8 +64,8 @@ export function StockFollowUps({ db, organizationId, branchId, actorId, products
       <div className="section-heading"><h2>Expiry reminders</h2><Button variant="outline" disabled={blocked} onClick={() => void load()}>Refresh reminders and investigations</Button></div>
       <p>Inspect expiry labels and keep expired goods separate. Use Record stock issue below for an owner-approved hold. Reminders never deduct stock.</p>
       <div className="form-grid">
-        <label className="field"><span>Look ahead</span><select value={horizon} disabled={blocked} onChange={e => { setData(undefined); setHorizon(e.target.value); }}><option value="7">Next 7 days</option><option value="30">Next 30 days</option><option value="90">Next 90 days</option></select></label>
-        <label className="field"><span>Expiry filter</span><select value={expiryFilter} disabled={blocked} onChange={e => { setData(undefined); setExpiryFilter(e.target.value); }}><option value="all">All reminders</option><option value="expired">Expired</option><option value="today">Expires today</option><option value="soon">Approaching expiry</option><option value="missing">Expiry missing</option></select></label>
+        <label className="field"><span id={`${labelId}-horizon`}>Look ahead</span><select aria-labelledby={`${labelId}-horizon`} value={horizon} disabled={blocked} onChange={e => { setData(undefined); setHorizon(e.target.value); }}><option value="7">Next 7 days</option><option value="30">Next 30 days</option><option value="90">Next 90 days</option></select></label>
+        <label className="field"><span id={`${labelId}-expiry`}>Expiry filter</span><select aria-labelledby={`${labelId}-expiry`} value={expiryFilter} disabled={blocked} onChange={e => { setData(undefined); setExpiryFilter(e.target.value); }}><option value="all">All reminders</option><option value="expired">Expired</option><option value="today">Expires today</option><option value="soon">Approaching expiry</option><option value="missing">Expiry missing</option></select></label>
       </div>
       {feedback && <p role="status" className="notice success">{feedback}</p>}
       {error && <p role="alert" className="notice error">{error} Loaded records are retained. Reconnect and select Refresh reminders and investigations.</p>}
@@ -72,7 +73,7 @@ export function StockFollowUps({ db, organizationId, branchId, actorId, products
       {loading && <p role="status">Refreshing reminders and investigations…</p>}
       {data ? <>
         <p>As of {time(data.asOf)} · Asia/Manila · {data.expiryTotals.expired} expired · {data.expiryTotals.today} expire today · {data.expiryTotals.soon} approaching expiry · {data.expiryTotals.missing} missing expiry. Refresh before acting.</p>
-        {data.expiry.length ? <div className="table-wrap history-table stock-control-table" role="region" aria-label="Expiry reminders" tabIndex={0}><table><thead><tr><th scope="col">Product / lot</th><th scope="col">Reminder / physical quantities</th></tr></thead><tbody>{data.expiry.map(row => <tr key={`${row.product_id}:${row.batch_id ?? "none"}`}>
+        {data.expiry.length ? <div className="table-wrap history-table stock-control-table" role="region" aria-label="Expiry reminders" tabIndex={0}><table role="table"><thead><tr><th scope="col">Product / lot</th><th scope="col">Reminder / physical quantities</th></tr></thead><tbody>{data.expiry.map(row => <tr key={`${row.product_id}:${row.batch_id ?? "none"}`}>
           <td><strong>{row.product_name}</strong><small>{row.sku} · Lot: {row.lot}</small><small>Expiry: {row.expires_on ?? "not recorded"}</small></td>
           <td><strong>{expiryStatus(row)}</strong><small>On hand: {new Decimal(row.saleable).toFixed()} {row.base_unit}</small><small>Held separately: {new Decimal(row.held).toFixed()} {row.base_unit}</small></td>
         </tr>)}</tbody></table></div> : <p>No stock matches this expiry filter. Missing expiry dates appear separately when expiry tracking is required.</p>}
@@ -83,10 +84,10 @@ export function StockFollowUps({ db, organizationId, branchId, actorId, products
     <section className="panel stock-followups">
       <h2>Stock investigations</h2>
       <p>Unresolved differences remain open until the owner records the evidence and outcome. Assigning a person or recording progress does not close a case or change stock.</p>
-      <label className="field followup-filter"><span>Investigation filter</span><select value={filter} disabled={blocked} onChange={e => { setData(undefined); setFilter(e.target.value); }}><option value="all">All unresolved</option><option value="overdue">Overdue</option><option value="due_today">Due today</option><option value="unassigned">Unassigned / needs reassignment</option><option value="mine">Assigned to me</option></select></label>
+      <label className="field followup-filter"><span id={`${labelId}-investigation`}>Investigation filter</span><select aria-labelledby={`${labelId}-investigation`} value={filter} disabled={blocked} onChange={e => { setData(undefined); setFilter(e.target.value); }}><option value="all">All unresolved</option><option value="overdue">Overdue</option><option value="due_today">Due today</option><option value="unassigned">Unassigned / needs reassignment</option><option value="mine">Assigned to me</option></select></label>
       {data && <>
         <p role="status">{data.totals.open} open investigations · {data.totals.overdue} overdue · {data.totals.dueToday} due today · {data.totals.unassigned} need assignment. Showing {data.cases.length} matching cases, oldest first.</p>
-        {data.cases.length ? <div className="table-wrap history-table stock-control-table" role="region" aria-label="Open stock investigations" tabIndex={0}><table><thead><tr><th scope="col">Issue / evidence / follow-up</th><th scope="col">Follow-up actions</th></tr></thead><tbody>{data.cases.map(row => <tr key={`${row.id}:${row.follow_up_version}`}>
+        {data.cases.length ? <div className="table-wrap history-table stock-control-table" role="region" aria-label="Open stock investigations" tabIndex={0}><table role="table"><thead><tr><th scope="col">Issue / evidence / follow-up</th><th scope="col">Follow-up actions</th></tr></thead><tbody>{data.cases.map(row => <tr key={`${row.id}:${row.follow_up_version}`}>
           <td><strong>{row.kind.replaceAll("_", " ")}</strong><small>{time(row.created_at)} · Source: {row.source_id}</small>
             <details><summary>Recorded details</summary><p className="stock-evidence">{evidence(row, products)}</p></details>
             <p><strong>Responsible: {row.assigned_user_id ? row.assigned_to : "Unassigned"}</strong></p>
@@ -98,7 +99,7 @@ export function StockFollowUps({ db, organizationId, branchId, actorId, products
           </td>
           <td><div className="followup-actions">
             {canAssign && <ApprovalForm action="Assign follow-up" label="Assignment instructions" description="Choose the responsible employee and deadline. Record what they must check. This keeps the case open." confirmLabel="Save assignment" disabled={blocked} onConfirm={(reason, f) => execute(() => save("assign_stock_exception", { exceptionId: row.id, expectedVersion: row.follow_up_version, assigneeId: value(f, "assignee"), dueOn: value(f, "due"), reason }))}>
-              <label className="field"><span>Responsible employee</span><select name="assignee" required defaultValue={row.assignee_active ? row.assigned_user_id ?? "" : ""}><option value="">Choose an employee</option>{data.staff.map(s => <option key={s.userId} value={s.userId}>{s.name} · {s.role.replaceAll("_", " ")}</option>)}</select></label>
+              <label className="field"><span id={`${labelId}-assignee-${row.id}`}>Responsible employee</span><select name="assignee" aria-labelledby={`${labelId}-assignee-${row.id}`} required defaultValue={row.assignee_active ? row.assigned_user_id ?? "" : ""}><option value="">Choose an employee</option>{data.staff.map(s => <option key={s.userId} value={s.userId}>{s.name} · {s.role.replaceAll("_", " ")}</option>)}</select></label>
               <label className="field"><span>Follow-up due date</span><input name="due" type="date" min="2000-01-01" max="2100-12-31" required defaultValue={row.due_on ?? data.today} /></label>
             </ApprovalForm>}
             {(canAssign || row.assigned_user_id === actorId) && <ApprovalForm action="Record progress" label="Progress evidence" description="Record what was checked and what is still unresolved. Only the owner can close the investigation." confirmLabel="Save progress" disabled={blocked} onConfirm={reason => execute(() => save("note_stock_exception", { exceptionId: row.id, expectedVersion: row.follow_up_version, reason }))} />}
