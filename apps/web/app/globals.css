@@ -2512,3 +2512,15 @@ td small {
 .count-comparison dt { color:var(--muted); font-size:12px; }
 .count-comparison dd { margin:4px 0 0; font-weight:650; font-variant-numeric:tabular-nums; }
 @media(max-width:730px) { .count-comparison { grid-template-columns:1fr; } }
+
+.partial-refund-control { min-width: 0; overflow-wrap: anywhere; }
+.partial-refund-control p { max-width: 70ch; }
+.partial-refund-fields { min-width: 0; margin-block: 14px; padding: 12px; border: 1px solid var(--line); }
+.partial-refund-fields legend { font-weight: 700; }
+.refund-line + .refund-line, .refund-history > div + div { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
+.refund-line input, .refund-line select, .partial-refund-fields > label input { min-width: 0; width: 100%; }
+.refund-preview, .refund-history { margin-top: 18px; }
+.partial-refund-control .approval-fields { min-width: 0; }
+
+.refund-detail { padding-block: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
+.refund-detail .partial-refund-control { max-width: 44rem; margin-top: 14px; }

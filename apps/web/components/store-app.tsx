@@ -1,4 +1,5 @@
 "use client";
+import { PartialRefundControl } from "./partial-refund";
 
 /* WORLD: A cooperative store's orderly stock book: forest ink, warm paper, ruled tables, precise figures.
    STORY: Cashiers complete a cash sale; owners follow each stock change back to its source.
@@ -208,6 +209,7 @@ function download(name: string, data: unknown) {
 }
 
 export function StoreApp() {
+  const [partialRefundSaleId,setPartialRefundSaleId]=useState<string>();
   const [localHistoryLimit, setLocalHistoryLimit] = useState(50);
   const [hasOlderLocal, setHasOlderLocal] = useState(false);
   const [recoveryArchive, setRecoveryArchive] = useState<{ id: string; next: number; parts: number; scope: string }>();
@@ -2654,7 +2656,10 @@ export function StoreApp() {
                             s.sale_reversals.length > 0) ? (
                             <span className="status-tag">Refunded</span>
                           ) : (
-                            isOwner && (
+                            <>
+                            {Array.isArray(s.sale_partial_refunds)&&s.sale_partial_refunds.length>0&&<p className="status-tag">Cash refunded: {money(s.sale_partial_refunds.reduce((n:number,r:{amount:number})=>n+Number(r.amount),0))}</p>}
+                            {isOwner&&<Button size="sm" variant="outline" disabled={!online||busy} onClick={()=>setPartialRefundSaleId(String(s.id))}>Partial refund</Button>}
+                            {isOwner && (!Array.isArray(s.sale_partial_refunds)||s.sale_partial_refunds.length===0) && (
                               <ApprovalForm
                                 action="Full refund"
                                 label="Refund reason"
@@ -2692,7 +2697,8 @@ export function StoreApp() {
                                   <Field label={`Saleable portion for mixed return line ${lineIndex+1} (${item.unitName})`}><input name={`resalable-${lineIndex}`} type="number" min="0" max={item.quantity} step="0.000001" /><small>For a split return only. The rest of the returned quantity stays on hold.</small></Field>
                                 </div>)}
                               </ApprovalForm>
-                            )
+                            )}
+                            </>
                           )}
                         </td>
                       </tr>
@@ -2705,6 +2711,11 @@ export function StoreApp() {
                   body="Sales appear here after synchronization. Pending local records remain in the Sync center."
                 />
               )}
+              {!practice&&isOwner&&partialRefundSaleId&&branchSales.some(s=>s.id===partialRefundSaleId)&&<section className="refund-detail" aria-label="Selected sale partial refund">
+                <h3>Refund selected quantities</h3><p>Receipt: {String(branchSales.find(s=>s.id===partialRefundSaleId)?.receipt)}</p>
+                <Button size="sm" variant="ghost" disabled={busy} onClick={()=>setPartialRefundSaleId(undefined)}>Close refund details</Button>
+                <PartialRefundControl key={`partial:${member.organizationId}:${branchId}:${partialRefundSaleId}`} db={db} organizationId={member.organizationId} branchId={branchId} saleId={partialRefundSaleId} actorId={member.userId} shiftId={lease?.shiftId} readDisabled={!online||busy} disabled={!online||busy||!lease||allPendingCount>0||syncing||cart.items.length>0} execute={fn=>run(fn,true,true)}/>
+              </section>}
               {!practice && branchSales.length > 0 && (
                 <div className="section-heading">
                   <p className="muted" role="status">
