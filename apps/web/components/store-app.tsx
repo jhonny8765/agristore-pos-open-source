@@ -2181,7 +2181,7 @@ export function StoreApp() {
                 </section>
                 <div>
                   <section className="panel">
-                    <h2>Suppliers</h2>
+                    <h2 id="purchasing-suppliers">Suppliers</h2>
                     {(cloud.suppliers ?? []).length ? (
                       <ul className="plain-list">
                         {(cloud.suppliers ?? []).map((s) => (
