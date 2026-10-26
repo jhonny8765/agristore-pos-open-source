@@ -1,4 +1,5 @@
 export const retainedTables=[
+ 'app_private.loss_cost_evidence',
  'organizations','branches','staff_memberships','devices','products','product_units','unit_prices','sales','sale_items','payments','sale_reversals','inventory_movements','branch_inventory','cashier_shifts','shift_authorizations','stock_transfers','stock_holds','stock_issues','stock_exceptions','stock_control_events','audit_events','stock_counts','adjustment_approvals','app_private.blind_counts','app_private.count_observations',
 ];
 export function fingerprintSQL(organizationId){

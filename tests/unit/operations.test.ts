@@ -69,6 +69,7 @@ describe("online inventory operation recovery", () => {
     expect(await pendingOperations(target)).toHaveLength(0);
   });
   it.each([
+    {action:"record_loss_cost",data:{lossKey:"movement:123",expectedCostId:null,unitId:uuid(10),unitCostCentavos:"125000",zeroCostConfirmed:false,reference:"TEST invoice",reason:"TEST documented acquisition cost"},idField:"costEvidenceId"},
     {action:"assign_stock_exception",data:{exceptionId:uuid(91),assigneeId:uuid(4),dueOn:"2026-11-01",expectedVersion:0,reason:"TEST inspect supplier records"},idField:"followUpId"},
     {action:"note_stock_exception",data:{exceptionId:uuid(91),expectedVersion:1,reason:"TEST inspection still pending"},idField:"followUpId"},
     {action:"start_blind_count",data:{productId:uuid(10),batchId:null,reason:"TEST blind count"},idField:"countId"},

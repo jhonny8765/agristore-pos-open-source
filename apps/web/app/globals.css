@@ -1466,6 +1466,26 @@ form > .button {
 .stock-followups .section-heading { flex-wrap: wrap; align-items: flex-start; }
 .stock-followups .section-heading .button { max-width: 100%; white-space: normal; text-align: left; }
 .stock-followups :is(.field, select) { min-width: 0; }
+.stock-loss-report .section-heading { flex-wrap: wrap; align-items: flex-start; }
+.stock-loss-report .button { max-width: 100%; white-space: normal; }
+.stock-loss-report :is(.field, select) { min-width: 0; }
+.stock-loss-report .form-grid { margin-block: 16px; }
+.loss-report-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-block: 16px; }
+.loss-report-totals { border-block: 1px solid var(--line); margin-block: 20px; padding-block: 12px; }
+.loss-table table { table-layout: fixed; white-space: normal; }
+.loss-table :is(th, td) { overflow-wrap: anywhere; vertical-align: top; }
+.loss-table :is(th, td):first-child { width: 32%; }
+.loss-table :is(th, td):nth-child(2) { width: 15%; }
+.loss-table .approval-form { width: 100%; margin-block: 12px; }
+.loss-cost-history { margin-top: 12px; }
+.loss-cost-history ol { padding-inline-start: 20px; }
+@media (max-width: 720px) {
+  .loss-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .loss-table :is(tbody, tr, td) { display: block; width: 100%; }
+  .loss-table tr { border-bottom: 1px solid var(--line); padding-block: 10px; }
+  .loss-table :is(td, td:first-child, td:nth-child(2)) { width: 100%; border: 0; padding: 8px 4px; text-align: left; }
+  .loss-table td.numeric::before { content: attr(data-label); font-weight: 650; }
+}
 @media (max-width: 720px) {
   .stock-control-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
   .stock-control-table :is(tbody, tr, td) { display: block; width: 100%; }

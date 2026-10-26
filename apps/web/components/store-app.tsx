@@ -108,6 +108,7 @@ import { ApprovalForm } from "./approval-form";
 import { HistoryRegister } from "./history-register";
 import { StorageHealth } from "./storage-health";
 import { StockControls } from "./stock-controls";
+import { StockLossReport } from "./stock-loss-report";
 import { BlindCounts } from "./blind-counts";
 import { preferredBatch, outstandingTransfer } from "../lib/stock-controls";
 import type { HistoryKind } from "../lib/history";
@@ -1799,6 +1800,7 @@ export function StoreApp() {
                   <Button variant="outline" onClick={() => setView("inventory")}>Open stock controls</Button>
                 </section>
               </div>
+              {!practice && (isOwner || member.role === "manager") && <StockLossReport key={`loss-report:${member.organizationId}:${branchId}`} db={db} organizationId={member.organizationId} branchId={branchId} branchName={selectedBranch?.name ?? "Selected branch"} actorId={member.userId} products={products} owner={isOwner} online={online} disabled={busy} revision={historyRevision} execute={fn => run(fn,true,true)} />}
               <section className="panel">
                 <h2>Cash reconciliation</h2>
                 {(cloud.cashier_shifts ?? []).length ? (

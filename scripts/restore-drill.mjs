@@ -72,6 +72,12 @@ const followupException=sql(`select id from public.stock_exceptions where organi
 const assignment={...ctx(),exceptionId:followupException,assigneeId:id(16),dueOn:'2026-10-01',expectedVersion:0,followUpId:id(24),reason:'TEST restore assigned investigation'};
 const progress={...ctx(),exceptionId:followupException,expectedVersion:1,followUpId:id(25),reason:'TEST evidence retained while still unresolved'};
 command('assign_stock_exception',assignment);command('note_stock_exception',progress,'postgres',16);
+// Preserve documented cost and replay its original request after real pg_restore.
+const damageHold=sql(`select id from public.stock_holds where organization_id='${id(2)}' and source_id='${id(11)}';`).trim();
+const disposal={...ctx(),holdId:damageHold,dispositionId:id(30),quantity:'0.25',disposition:'dispose',reason:'TEST held goods confirmed unusable'};
+command('disposition_hold',disposal);
+const costEvidence={...ctx(),lossKey:'held:'+id(30),costEvidenceId:id(31),expectedCostId:null,unitId:id(7),unitCostCentavos:'2400',zeroCostConfirmed:false,reference:'TEST supplier invoice RESTORE-001',reason:'TEST documented cost per kilo'};
+command('record_loss_cost',costEvidence);
 // Compare retained content, not just row counts or one projected balance.
 const fingerprints = target => lastJSON(sql(fingerprintSQL(id(2)),target));
 const original = fingerprints("postgres");
@@ -109,6 +115,11 @@ try {
   command("disposition_hold",release,database);
   assert.equal(command('assign_stock_exception',assignment,database).duplicate,true);
   assert.equal(command('note_stock_exception',progress,database,16).duplicate,true);
+  assert.equal(command('record_loss_cost',costEvidence,database).duplicate,true);
+  const lossReport=command('stock_loss_report',ctx(),database);
+  assert.equal(lossReport.totals.documentedLossCentavos,'600');
+  assert.equal(lossReport.rows[0].reference,costEvidence.reference);
+  assert.equal(command('loss_cost_history',{...ctx(),lossKey:costEvidence.lossKey},database).rows[0].id,id(31));
   const restoredFollowup=command('stock_followups',ctx(),database).cases.find(r=>r.id===followupException);
   assert.equal(restoredFollowup.assigned_user_id,id(16));assert.equal(restoredFollowup.due_on,assignment.dueOn);
   assert.equal(restoredFollowup.progress_note,progress.reason);assert.equal(restoredFollowup.follow_up_version,2);
@@ -116,7 +127,7 @@ try {
   const retried = fingerprints(database);
   for (const table of tables.filter(t=>t!=="devices")) assert.deepEqual(retried[table],original[table],`Restored retry changed ${table}`);
   const controls = command("stock_controls",ctx(),database);
-  assert.equal(controls.holds.reduce((sum,h)=>sum+Number(h.remaining),0),1.25);
+  assert.equal(controls.holds.reduce((sum,h)=>sum+Number(h.remaining),0),1);
   const destination = command("snapshot",{...ctx(6),transactionIds:[]},database);
   assert.equal(destination.stocks[0].quantity,"2.000000");
   assert.equal(sql(`select (quantity-received_quantity-held_quantity-lost_quantity)::text from public.stock_transfers where id='${id(12)}';`,database).trim(),"0.750000");
@@ -136,7 +147,7 @@ try {
   assert.throws(()=>sql(`update public.sales set total=1 where id='${id(9)}';`,database),/History is immutable/);
   assert.equal(Number(sql(`select count(*) from public.branch_inventory i where i.organization_id='${id(2)}' and i.quantity<>(select sum(m.quantity) from public.inventory_movements m where m.organization_id=i.organization_id and m.branch_id=i.branch_id and m.product_id=i.product_id and m.batch_id is not distinct from i.batch_id);`,database).trim()),0);
   console.log(
-    "Restore drill passed: 25 table content fingerprints, assigned overdue investigation and progress replayed once, blind sealed pairs and first-only observations resumed with independent owner approval, original sale/payment and linked refund, held goods, approved damage, partial transfer with 0.75 kg still in transit, zero duplicate retry effects, working post-restore disposition, immutable history, and zero ledger/projection differences. Disposable CI dump only; production cloud backup not certified.",
+    "Restore drill passed: 26 table content fingerprints, purchase-cost evidence and original request replayed once, assigned overdue investigation and progress replayed once, blind sealed pairs and first-only observations resumed with independent owner approval, original sale/payment and linked refund, held goods, approved damage, partial transfer with 0.75 kg still in transit, zero duplicate retry effects, working post-restore disposition, immutable history, and zero ledger/projection differences. Disposable CI dump only; production cloud backup not certified.",
   );
 } finally {
   run(["dropdb", "-U", "postgres", database]);
