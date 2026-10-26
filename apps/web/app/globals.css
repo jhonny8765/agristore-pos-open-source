@@ -2524,3 +2524,6 @@ td small {
 
 .refund-detail { padding-block: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
 .refund-detail .partial-refund-control { max-width: 44rem; margin-top: 14px; }
+
+.partial-refund-control .approval-form { width: 100%; max-width: 100%; }
+.partial-refund-control .button { max-width: 100%; white-space: normal; }
