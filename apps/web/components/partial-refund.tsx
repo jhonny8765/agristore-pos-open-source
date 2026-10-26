@@ -1,0 +1,50 @@
+"use client";
+import {useState,useEffect,useRef} from "react";
+import {money,partialRefundPreview,type PartialRefundPlan,type PartialRefundItem} from "@agristore/domain";
+import {PosDatabase,unresolvedStates} from "@agristore/offline";
+import {command} from "../lib/api";
+import {onlineOperation,pendingOperations} from "../lib/operations";
+import {ApprovalForm} from "./approval-form";
+import {Button} from "./ui/button";
+type Draft={quantity:string;returnedQuantity:string;disposition:PartialRefundItem["disposition"];resalableQuantity:string};
+type HistoryRow={id:string;amount:number;reference:string;reason:string;created_at:string;lines:{lineIndex:number;quantity:string;returnedQuantity:string;saleableQuantity:string;heldQuantity:string;amount:number}[]};
+type History={rows:HistoryRow[];next:{at:string;id:string}|null};
+export function PartialRefundControl({db,organizationId,branchId,saleId,actorId,shiftId,disabled,readDisabled,execute}:{db:PosDatabase;organizationId:string;branchId:string;saleId:string;actorId:string;shiftId?:string;disabled:boolean;readDisabled:boolean;execute:(fn:()=>Promise<void>)=>Promise<Error|undefined|void>}){
+ const detail=useRef<HTMLDivElement>(null);
+ useEffect(()=>{detail.current?.focus();},[]);
+ const [plan,setPlan]=useState<PartialRefundPlan>(),[drafts,setDrafts]=useState<Record<number,Draft>>({}),[review,setReview]=useState<ReturnType<typeof partialRefundPreview>>(),[reference,setReference]=useState(""),[error,setError]=useState(""),[feedback,setFeedback]=useState(""),[loading,setLoading]=useState(false),[history,setHistory]=useState<History>();
+ const ctx={organizationId,branchId,saleId};
+ async function load(){setLoading(true);setError("");setReview(undefined);try{const[p,h]=await Promise.all([command<PartialRefundPlan>("partial_refund_plan",ctx),command<History>("partial_refund_history",ctx)]);setPlan(p);setHistory(h);}catch(e){setError(e instanceof Error?e.message:"Reconnect and refresh this sale's refund details.");}finally{setLoading(false);}}
+ const draft=(index:number):Draft=>drafts[index]??{quantity:"",returnedQuantity:"0",disposition:"not_returned",resalableQuantity:""};
+ function change(index:number,field:keyof Draft,value:string){setDrafts({...drafts,[index]:{...draft(index),[field]:value}});setReview(undefined);}
+ function prepare(){setError("");setFeedback("");try{if(reference.trim().length<3||reference.trim().length>200)throw new Error("Enter a refund reference with 3 to 200 characters.");const items=plan!.lines.filter(l=>draft(l.lineIndex).quantity!==""&&!/^0(?:\.0+)?$/.test(draft(l.lineIndex).quantity)).map(l=>({lineIndex:l.lineIndex,...draft(l.lineIndex)}));setReview(partialRefundPreview(plan!,items));}catch(e){setReview(undefined);setError(e instanceof Error?e.message:"Check the selected quantities.");}}
+ return <div ref={detail} tabIndex={-1} className="partial-refund-control">
+  <Button size="sm" variant="outline" disabled={readDisabled||loading} onClick={()=>void load()}>{plan?"Refresh refund details":"Check remaining quantities"}</Button>
+  {loading&&<p role="status">Checking original quantities and earlier refunds…</p>}{error&&<p role="alert" className="notice error">{error}</p>}{feedback&&<p role="status">{feedback}</p>}
+  {plan&&<>{disabled&&!readDisabled&&<p>Open your own cashier shift and clear the basket and pending records before issuing a new refund.</p>}<p>Original paid: {money(plan.total)} · Already refunded: {money(plan.refundedCash)} · Cash remaining: {money(plan.remainingCash)}</p><p>Use the original sale units. Refund quantity controls cash; physical return quantity controls goods. A refund does not return missing goods to stock. Expired or uninspected goods must stay held.</p>
+   {plan.fullyRefunded?<p>All original quantities are already refunded. Do not issue another cash refund for this sale.</p>:<>
+    <fieldset className="partial-refund-fields" disabled={disabled||loading}>
+     <legend>Select quantities to refund</legend>
+     {plan.lines.map(l=><div className="refund-line" key={l.lineIndex}>
+      <strong>Line {l.lineIndex+1}: {l.name}</strong><p>Sold {l.quantity} {l.unitName} · Already refunded {l.refundedQuantity} · Remaining {l.remainingQuantity}. Each {l.unitName} = {l.factor} {l.baseUnit}. Lot ID: {l.batchId??"No lot"}</p>
+      {l.remainingQuantity==="0"?<p>This line is fully refunded.</p>:<>
+       <label className="field"><span>Refund quantity for line {l.lineIndex+1} ({l.unitName})</span><input inputMode="decimal" value={draft(l.lineIndex).quantity} onChange={e=>change(l.lineIndex,"quantity",e.target.value)}/><small>Leave blank for no refund on this line.</small></label>
+       <label className="field"><span>Physical returned quantity for line {l.lineIndex+1} ({l.unitName})</span><input inputMode="decimal" value={draft(l.lineIndex).returnedQuantity} onChange={e=>change(l.lineIndex,"returnedQuantity",e.target.value)}/></label>
+       <label className="field"><span>Partial return disposition for line {l.lineIndex+1}</span><select value={draft(l.lineIndex).disposition} onChange={e=>change(l.lineIndex,"disposition",e.target.value)}><option value="not_returned">No goods returned (quantity zero)</option><option value="hold">Hold separately for inspection</option><option value="resalable">Inspected and saleable</option><option value="mixed">Split between saleable and held goods</option></select></label>
+       {draft(l.lineIndex).disposition==="mixed"&&<label className="field"><span>Partial saleable portion for line {l.lineIndex+1} ({l.unitName})</span><input inputMode="decimal" value={draft(l.lineIndex).resalableQuantity} onChange={e=>change(l.lineIndex,"resalableQuantity",e.target.value)}/></label>}
+      </>}
+     </div>)}
+     <label className="field"><span>Partial refund reference</span><input maxLength={200} value={reference} onChange={e=>{setReference(e.target.value);setReview(undefined);}}/></label>
+     <Button type="button" variant="outline" onClick={prepare}>Review partial refund</Button>
+    </fieldset>
+    {review&&<div className="refund-preview"><strong>Cash to refund now: {money(review.amount)}</strong><p>Amounts use the original paid line totals. Cumulative rounding assigns the final centavo exactly once; a very small portion may have a zero cash amount.</p>{review.items.map(i=><p key={i.lineIndex}>{i.name} · Refund {i.quantity} {i.unitName}: {money(i.amount)}<br/>Physical return: {i.returnedQuantity} {i.unitName} · Add saleable: {i.saleableBase} {i.baseUnit} · Hold separately: {i.heldBase} {i.baseUnit}</p>)}
+     <ApprovalForm action="Authorize partial refund" label="Partial refund reason" description="Check the actual goods and cash amount. Save once, then give only the confirmed amount. If confirmation is interrupted, retry the original request in Sync center before paying or saving again." confirmLabel="Confirm partial refund" disabled={disabled||loading} onConfirm={async(reason,f)=>{
+      const failure=await execute(async()=>{if(!shiftId)throw new Error("Open your own shift before issuing a cash refund.");if(await db.sales.where("status").anyOf(unresolvedStates).count()>0||(await pendingOperations(db)).length>0)throw new Error("Resolve pending sales and saved requests in Sync center before refunding.");await onlineOperation(db,actorId,"partial_refund_sale",{...ctx,shiftId,expectedRefundVersion:plan.version,expectedAmount:review.amount,reference:reference.trim(),reason,physicalConfirmed:f.get("physical")==="on",items:review.items.map(i=>({lineIndex:i.lineIndex,quantity:i.quantity,returnedQuantity:i.returnedQuantity,disposition:i.disposition,...(i.disposition==="mixed"?{resalableQuantity:i.resalableQuantity}:{})}))},"refundId");});
+      if(failure)return failure;setDrafts({});setReference("");setReview(undefined);setFeedback(`Saved cash refund: ${money(review.amount)}. Give this amount once and retain the refund reference.`);await load();
+     }}><label className="checkbox"><input name="physical" type="checkbox" required/>I checked the cash amount and the physical returned, saleable and held quantities.</label></ApprovalForm>
+    </div>}
+   </>}
+   {history&&<div className="refund-history"><h3>Saved partial refunds</h3>{history.rows.length?history.rows.map(h=><div key={h.id}><strong>{h.reference} · {money(h.amount)}</strong><p>{new Date(h.created_at).toLocaleString("en-PH",{timeZone:"Asia/Manila"})} · {h.reason}</p><small>Refund ID: {h.id}</small>{h.lines.map(l=><p key={l.lineIndex}>Line {l.lineIndex+1}: refunded {l.quantity}, physically returned {l.returnedQuantity}, saleable {l.saleableQuantity}, held {l.heldQuantity} in its original sale unit · {money(l.amount)}</p>)}</div>):<p>No partial refunds recorded.</p>}{history.next&&<Button size="sm" variant="outline" disabled={readDisabled||loading} onClick={async()=>{setLoading(true);setError("");try{const next=await command<History>("partial_refund_history",{...ctx,before:history.next});setHistory({rows:[...history.rows,...next.rows],next:next.next});}catch(e){setError(e instanceof Error?e.message:"Could not load older refunds.");}finally{setLoading(false);}}}>Load older partial refunds</Button>}<p>Only loaded refunds are shown. Original sale and refund history stay retained.</p></div>}
+  </>}
+ </div>;
+}

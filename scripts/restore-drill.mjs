@@ -94,6 +94,16 @@ const reversal={...ctx(6),receiptId:id(63),reversalId:id(65),expectedLedgerRevis
 command('reverse_delivery',reversal);
 const correctedReceipt={...mistakenReceipt,receiptId:id(66),reference:'TEST-RESTORE-CORRECTED',correctsInspectionId:id(63),expectedReversalId:id(65),reason:'TEST linked corrected actual goods',items:[{...mistakenReceipt.items[0],accepted:'0.25',held:'0.25',reason:'TEST actual quarter kilo saleable and quarter kilo held'}]};
 command('inspect_delivery',correctedReceipt);
+// Isolate partial-refund cash/stock evidence from the earlier count and transfer fixtures.
+sql(`insert into public.branches(id,organization_id,name,code) values('${id(70)}','${id(2)}','TEST restore refund branch','RESTORE3');`);
+command('register_device',{...ctx(70),deviceId:id(71),name:'TEST restore refund drawer'});
+const partialShift=command('open_shift',{...ctx(70),deviceId:id(71),openingCash:10000});
+command('receive_stock',{...ctx(70),receiptId:id(73),source:'purchase',reference:'TEST refund restore stock',items:[{productId:id(4),unitId:id(7),quantity:'5'}]});
+const partialSale={...sale,...ctx(70),transactionId:id(72),deviceId:id(71),shiftId:partialShift.shiftId,total:3200,cashReceived:5000,items:[{...sale.items[0],quantity:'1',lineTotal:3200}]};
+command('record_sale',partialSale);
+const partialRequest={...ctx(70),saleId:id(72),refundId:id(74),shiftId:partialShift.shiftId,expectedRefundVersion:0,expectedAmount:1600,reference:'TEST saved partial refund',reason:'TEST half kilo refunded with quarter kilo saleable and quarter held',physicalConfirmed:true,items:[{lineIndex:0,quantity:'0.5',returnedQuantity:'0.5',disposition:'mixed',resalableQuantity:'0.25'}]};
+command('partial_refund_sale',partialRequest);
+command('close_shift',{...ctx(70),deviceId:id(71),shiftId:partialShift.shiftId,countedCash:11600});
 // Compare retained content, not just row counts or one projected balance.
 const fingerprints = target => lastJSON(sql(fingerprintSQL(id(2)),target));
 const original = fingerprints("postgres");
@@ -133,6 +143,11 @@ try {
   assert.equal(command('note_stock_exception',progress,database,16).duplicate,true);
   assert.equal(command('record_loss_cost',costEvidence,database).duplicate,true);
   for(const [action,payload] of [['create_purchase_order',purchaseOrder],['purchase_order_event',orderApproval],['inspect_delivery',rejectedDelivery],['record_delivery_claim',supplierProgress],['record_delivery_claim',supplierResolution]]) assert.equal(command(action,payload,database).duplicate,true);
+  assert.equal(command('partial_refund_sale',partialRequest,database).duplicate,true);
+  const restoredRefund=command('partial_refund_plan',{...ctx(70),saleId:id(72)},database);
+  assert.equal(restoredRefund.remainingCash,1600);assert.equal(restoredRefund.lines[0].remainingQuantity,'0.5');
+  assert.equal(command('partial_refund_history',{...ctx(70),saleId:id(72)},database).rows[0].amount,1600);
+  assert.equal(Number(sql(`select expected_cash from public.cashier_shifts where id='${partialShift.shiftId}';`,database).trim()),11600);
   const purchasing=command('purchasing_workspace',ctx(),database);
   assert.equal(purchasing.orders[0].lines[0].remaining,'2');assert.equal(purchasing.deliveries[0].claim_state,'resolved');
   assert.equal(command('delivery_claim_history',{...ctx(),receiptId:id(44)},database).rows.length,2);
@@ -177,12 +192,19 @@ try {
   const correctedHold=sql(`select hold_id from app_private.delivery_inspection_lines where inspection_id='${id(66)}';`,database,'supabase_admin').trim();
   command('disposition_hold',{...ctx(6),holdId:correctedHold,dispositionId:id(67),quantity:'0.25',disposition:'release',reason:'TEST post-restore inspection of corrected goods'},database);
   assert.equal(command('snapshot',{...ctx(6),transactionIds:[]},database).stocks[0].quantity,'2.500000');
+  const nextRefundShift=command('open_shift',{...ctx(70),deviceId:id(71),openingCash:2000},database);
+  command('partial_refund_sale',{...partialRequest,refundId:id(75),shiftId:nextRefundShift.shiftId,expectedRefundVersion:1,reference:'TEST restored remainder refund',items:[{lineIndex:0,quantity:'0.5',returnedQuantity:'0',disposition:'not_returned'}]},database);
+  assert.equal(command('partial_refund_plan',{...ctx(70),saleId:id(72)},database).remainingCash,0);
+  assert.equal(command('snapshot',{...ctx(70),transactionIds:[]},database).stocks[0].quantity,'4.250000');
+  command('close_shift',{...ctx(70),deviceId:id(71),shiftId:nextRefundShift.shiftId,countedCash:400},database);
+  assert.equal(Number(sql(`select expected_cash from public.cashier_shifts where id='${nextRefundShift.shiftId}';`,database).trim()),400);
+  assert.throws(()=>sql(`update app_private.partial_refund_lines set amount=1 where refund_id='${id(74)}';`,database,'supabase_admin'),/History is immutable/);
   assert.throws(()=>sql(`delete from app_private.delivery_reversals where id='${id(65)}';`,database,'supabase_admin'),/History is immutable/);
   assert.throws(()=>sql(`update app_private.delivery_inspection_lines set rejected=0 where inspection_id='${id(44)}';`,database,'supabase_admin'),/History is immutable/);
   assert.throws(()=>sql(`update public.sales set total=1 where id='${id(9)}';`,database),/History is immutable/);
   assert.equal(Number(sql(`select count(*) from public.branch_inventory i where i.organization_id='${id(2)}' and i.quantity<>(select sum(m.quantity) from public.inventory_movements m where m.organization_id=i.organization_id and m.branch_id=i.branch_id and m.product_id=i.product_id and m.batch_id is not distinct from i.batch_id);`,database).trim()),0);
   console.log(
-    "Restore drill passed: 36 table content fingerprints, immutable delivery reversal and movement lineage, correctly reopened order and linked corrected receipt, safe original retries and post-restore corrected-hold release, rejected deliveries and supplier claims, replacement receiving, purchase-cost evidence, independent counts, original sale/payment/refund, zero duplicate effects and zero ledger/projection differences. Disposable CI dump only; production cloud backup not certified.",
+    "Restore drill passed: 36 table content fingerprints, partial-refund cash/stock and remaining allocations, immutable delivery reversal and movement lineage, correctly reopened order and linked corrected receipt, safe original retries and post-restore corrected-hold release, rejected deliveries and supplier claims, replacement receiving, purchase-cost evidence, independent counts, original sale/payment/refund, zero duplicate effects and zero ledger/projection differences. Disposable CI dump only; production cloud backup not certified.",
   );
 } finally {
   run(["dropdb", "-U", "postgres", database]);
