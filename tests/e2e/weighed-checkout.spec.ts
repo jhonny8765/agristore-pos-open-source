@@ -64,6 +64,84 @@ async function practice(page: Page) {
 const complete = (page: Page) =>
   page.getByRole("button", { name: "Complete cash sale" });
 
+test("blank and cleared weights can switch units without reviving a previous charge", async ({ page, context }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Try practice checkout" }).click();
+  await page.getByRole("button", { name: "Sell Grower feeds by weight", exact: true }).click();
+  const entry = page.getByLabel("Weight entry for Grower feeds");
+  const weight = page.getByLabel(/^Quantity \(.+\) for Grower feeds$/);
+  const due = page.locator(".amount-due strong");
+  await entry.selectOption("g");
+  await expect(entry).toHaveValue("g");
+  await expect(weight).toHaveAccessibleName("Quantity (g) for Grower feeds");
+  await expect(weight).toHaveValue("");
+  await expect(due).toHaveText("₱0.00");
+  await expect(complete(page)).toBeDisabled();
+  await weight.fill("250");
+  await expect(due).toHaveText("₱8.40");
+  await entry.selectOption("kg");
+  await expect(weight).toHaveValue("0.25");
+  await expect(due).toHaveText("₱8.40");
+  await weight.fill("");
+  await entry.selectOption("g");
+  await expect(entry).toHaveValue("g");
+  await expect(weight).toHaveValue("");
+  await expect(due).toHaveText("₱0.00");
+  await expect(complete(page)).toBeDisabled();
+  await entry.selectOption("kg");
+  await expect(entry).toHaveValue("kg");
+  await expect(weight).toHaveValue("");
+  for (const invalid of ["0.", "1/", "-1", "1/0"]) {
+    await weight.fill(invalid);
+    await entry.selectOption("g");
+    await expect(entry).toHaveValue("kg");
+    await expect(weight).toHaveValue(invalid);
+    await expect(due).toHaveText("₱0.00");
+    await expect(complete(page)).toBeDisabled();
+  }
+  await weight.fill("1/4");
+  await entry.selectOption("g");
+  await expect(weight).toHaveValue("250");
+  await expect(due).toHaveText("₱8.40");
+  for (const [grams, kg, amount] of [["100", "0.1", "₱3.36"], ["500", "0.5", "₱16.80"], ["250", "0.25", "₱8.40"]]) {
+    await weight.fill(grams);
+    await entry.selectOption("kg");
+    await expect(weight).toHaveValue(kg);
+    await expect(due).toHaveText(amount);
+    await entry.selectOption("g");
+    await expect(weight).toHaveValue(grams);
+    await expect(due).toHaveText(amount);
+  }
+  await page.waitForFunction(() => navigator.serviceWorker.ready.then(() => true));
+  await context.setOffline(true);
+  await page.getByLabel("Cash received", { exact: true }).fill("10");
+  await complete(page).click();
+  await expect(page.getByText("₱1.60 change", { exact: true })).toBeVisible();
+  await page.reload();
+  await page.getByRole("button", { name: "Sales & receipts", exact: true }).click();
+  await expect(page.locator("tbody tr")).toHaveCount(1);
+  await expect(page.locator("tbody tr")).toContainText("8.40");
+});
+
+test("a grams-first peso request still requires actual weight confirmation", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 900 });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Try practice checkout" }).click();
+  await page.getByRole("button", { name: "Sell Grower feeds by peso amount", exact: true }).click();
+  await page.getByLabel("Customer budget (₱) for Grower feeds").fill("50");
+  await page.getByLabel("Weight entry for Grower feeds").selectOption("g");
+  const weight = page.getByLabel("Quantity (g) for Grower feeds", { exact: true });
+  await expect(weight).toHaveValue("");
+  await expect(complete(page)).toBeDisabled();
+  await weight.fill("500");
+  await expect(page.locator(".amount-due strong")).toHaveText("₱16.80");
+  await expect(complete(page)).toBeDisabled();
+  await page.getByRole("button", { name: "Confirm weighed amount", exact: true }).click();
+  await page.getByLabel("Cash received", { exact: true }).fill("20");
+  await complete(page).click();
+  await expect(page.getByText("₱3.20 change", { exact: true })).toBeVisible();
+});
+
 test("normal keystrokes accept half kilos and fractions; invalid drafts cannot charge the previous quantity", async ({
   page,
 }) => {

@@ -212,9 +212,17 @@ export function SaleLineEditor({
                 value={display}
                 disabled={disabled}
                 onChange={(event) => {
+                  const inGrams = event.target.value === "g";
+                  if (!draft.trim()) {
+                    setDisplay(inGrams ? "g" : "kg");
+                    cart.quantityError(
+                      lineId,
+                      "Enter the customer's weight in kg or grams.",
+                    );
+                    return;
+                  }
                   try {
                     const kg = quantityFromDisplay(draft, grams);
-                    const inGrams = event.target.value === "g";
                     setDisplay(inGrams ? "g" : "kg");
                     write(
                       new Decimal(kg).mul(inGrams ? 1000 : 1).toFixed(),
