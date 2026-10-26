@@ -108,6 +108,15 @@ insert into tap_results select is(jsonb_array_length(pg_temp.report(jsonb_build_
 do $$declare previous integer:=940; n integer; begin for n in 1..51 loop perform public.agri_command('record_loss_cost',pg_temp.cost(pg_temp.loss_key(801),16000+n,'130000',previous));previous:=16000+n;end loop;end$$;
 insert into tap_results select is(jsonb_array_length(public.agri_command('loss_cost_history',pg_temp.ctx()||jsonb_build_object('lossKey',pg_temp.loss_key(801)))->'rows'),50,'Cost-history page is bounded');
 insert into tap_results select is(jsonb_array_length(public.agri_command('loss_cost_history',pg_temp.ctx()||jsonb_build_object('lossKey',pg_temp.loss_key(801),'cursor',jsonb_build_object('revision',4)))->'rows'),3,'Old cost versions remain reachable');
+insert into report_snapshots values('beforeRounding',pg_temp.report());
+select public.agri_command('record_loss_cost',pg_temp.cost(pg_temp.loss_key(9001),17001,'25000000'));
+select public.agri_command('record_loss_cost',pg_temp.cost(pg_temp.loss_key(9002),17002,'25000000'));
+insert into tap_results select is((pg_temp.report()->'totals'->>'documentedLossCentavos')::numeric-((select data from report_snapshots where name='beforeRounding')->'totals'->>'documentedLossCentavos')::numeric,2::numeric,'Two half-cent losses round separately to two centavos, not one');
+reset role;
+delete from auth.sessions where user_id=pg_temp.i(11);
+set local role authenticated;
+select pg_temp.login(11);
+insert into tap_results select throws_ok($$select pg_temp.report()$$,'42501','Sign in again before using cost reports','Session revocation stops purchase-cost report access immediately');
 reset role;
 insert into tap_results select * from finish();
 select line from tap_results;
