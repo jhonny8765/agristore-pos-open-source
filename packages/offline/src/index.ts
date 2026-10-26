@@ -394,7 +394,11 @@ export const recoveryOperationIds: Record<string, string> = {
   receive_stock: "receiptId", dispatch_transfer: "transferId", receive_transfer: "receiptId",
   submit_count: "countId", refund_sale: "refundId", record_stock_issue: "issueId",
   disposition_hold: "dispositionId", write_off_transfer: "receiptId",
+  start_blind_count: "countId", record_blind_count: "observationId",
+  approve_count: "countId", cancel_blind_count: "countId", create_branch: "newBranchId",
 };
+const referenceOperations = new Set(["approve_count", "cancel_blind_count"]);
+export type RecoveryActor = Pick<Lease, "organizationId" | "branchId" | "cashierId" | "role">;
 const RECOVERY_PART_SIZE = 1000;
 interface RecoveryArchive {
   id: string; scope?: RecoveryScope; ids: string[]; operations: unknown[]; lease?: Lease; exportedAt: string;
@@ -457,9 +461,8 @@ export async function exportRecovery(db: PosDatabase, scope?: RecoveryScope) {
   await setSetting(db, `recovery:${archive.id}`, archive);
   return exportRecoveryPart(db, archive.id, 1, scope);
 }
-export async function importRecovery(db: PosDatabase, input: unknown, confirmedIds: string[] = []) {
+export async function importRecovery(db: PosDatabase, input: unknown, confirmedIds: string[] = [], actor?: RecoveryActor) {
   const lease = await setting<Lease>(db, "lease");
-  requireLease(lease);
   const data = input as {
     version?: unknown;
     sales?: unknown;
@@ -468,11 +471,18 @@ export async function importRecovery(db: PosDatabase, input: unknown, confirmedI
     archive?: { id: string; part: number; parts: number; totalRecords: number; recordCount: number; scope?: RecoveryScope };
   };
   if (
-    ![1,2].includes(Number(data?.version)) ||
+    (data?.version !== 1 && data?.version !== 2) ||
     !Array.isArray(data.sales) ||
     data.sales.length > (data.version === 2 ? RECOVERY_PART_SIZE : 100000)
   )
     throw new Error("Invalid recovery file");
+  // Stock staff restore online-operation evidence while all shifts stay closed.
+  // A supplied signed-in context never authorizes sale recovery without a lease.
+  if (data.sales.length || !actor) requireLease(lease);
+  if (data.sales.length && actor && (actor.organizationId !== lease!.organizationId ||
+    actor.branchId !== lease!.branchId || actor.cashierId !== lease!.cashierId))
+    throw new Error("The recovery account does not match the authorized shift");
+  const context = actor ?? lease!;
   if (data.version === 2 && (!data.archive || !/^[\da-f-]{36}$/i.test(data.archive.id) ||
     !Number.isInteger(data.archive.parts) || !Number.isInteger(data.archive.part) || data.archive.part < 1 ||
     data.archive.part > data.archive.parts || !Number.isSafeInteger(data.archive.totalRecords) || data.archive.totalRecords < 0 ||
@@ -481,14 +491,17 @@ export async function importRecovery(db: PosDatabase, input: unknown, confirmedI
     data.archive.recordCount !== Math.max(0,Math.min(RECOVERY_PART_SIZE,data.archive.totalRecords-(data.archive.part-1)*RECOVERY_PART_SIZE)) ||
     data.checksum !== await checksum({ archive:data.archive,sales: data.sales, pendingOperations: data.pendingOperations ?? [] })))
     throw new Error("Recovery part is incomplete or its checksum does not match. Keep the original file.");
+  if (data.archive?.scope && (data.archive.scope.organizationId !== context.organizationId ||
+    data.archive.scope.branchId !== context.branchId))
+    throw new Error("Recovery records belong to another business or branch");
   const normalize = (row: unknown) => {
     const payload = saleSchema.parse((row as { payload: unknown }).payload);
     if (
-      payload.organizationId !== lease.organizationId ||
-      payload.branchId !== lease.branchId
+      payload.organizationId !== context.organizationId ||
+      payload.branchId !== context.branchId
     )
       throw new Error("Recovery records belong to another business or branch");
-    if (payload.cashierId !== lease.cashierId && lease.role !== "owner")
+    if (payload.cashierId !== context.cashierId && context.role !== "owner")
       throw new Error(
         "Sign in as the original cashier or ask the owner to restore this file",
       );
@@ -524,7 +537,7 @@ export async function importRecovery(db: PosDatabase, input: unknown, confirmedI
       actorId: string;
       error?: string;
     };
-    const idField = recoveryOperationIds[op.action];
+    const idField = op && Object.hasOwn(recoveryOperationIds,op.action) ? recoveryOperationIds[op.action] : undefined;
     if (
       !idField ||
       !op.data ||
@@ -533,26 +546,36 @@ export async function importRecovery(db: PosDatabase, input: unknown, confirmedI
     )
       throw new Error("Invalid recovery operation");
     if (
-      op.data.organizationId !== lease.organizationId ||
-      op.data.branchId !== lease.branchId
+      op.data.organizationId !== context.organizationId ||
+      (op.action === "create_branch" ? op.data.branchId !== undefined : op.data.branchId !== context.branchId)
     )
       throw new Error(
         "Recovery operation belongs to another business or branch",
       );
-    if (op.actorId !== lease.cashierId && lease.role !== "owner")
+    if (op.actorId !== context.cashierId && context.role !== "owner")
       throw new Error("The owner must review another employee’s operation");
     const body = { ...op.data };
-    delete body[idField];
+    // Approval/closure refer to an existing count; its ID remains part of the
+    // request fingerprint. Generated transaction IDs are excluded, as at save.
+    if (!referenceOperations.has(op.action)) delete body[idField];
+    const key = `operation:${op.action}:${context.organizationId}:${op.data.branchId}`;
     return {
-      key: `operation:${op.action}:${lease.organizationId}:${lease.branchId}`,
+      key,
       value: {
         ...op,
-        key: `operation:${op.action}:${lease.organizationId}:${lease.branchId}`,
+        key,
         fingerprint: stableJSON(body),
         error: op.error ?? "Restored original request; verify before retrying",
       },
     };
   });
+  const operationKeys = new Map<string,string>();
+  for (const op of safeOperations) {
+    const identity = stableJSON({actorId:op.value.actorId,data:op.value.data});
+    if (operationKeys.has(op.key) && operationKeys.get(op.key) !== identity)
+      throw new Error("Recovery contains conflicting operations. Keep the original files for owner review.");
+    operationKeys.set(op.key,identity);
+  }
   const verified = new Set(confirmedIds);
   const sourceRows = data.sales;
   // Legacy >10k exports remain readable. Every 1000-record transaction can be
@@ -563,8 +586,8 @@ export async function importRecovery(db: PosDatabase, input: unknown, confirmedI
       const existing = await db.settings.get(op.key);
       if (
         existing &&
-        stableJSON((existing.value as { data: unknown }).data) !==
-          stableJSON(op.value.data)
+        ((existing.value as { actorId: string }).actorId !== op.value.actorId ||
+          stableJSON((existing.value as { data: unknown }).data) !== stableJSON(op.value.data))
       )
         throw new Error(
           "Another operation is already awaiting confirmation. Keep both recovery files.",
@@ -584,14 +607,14 @@ export async function importRecovery(db: PosDatabase, input: unknown, confirmedI
       await db.sales.add({
         ...record,
         status:
-          verified.has(record.id) ? "synced" : record.payload.cashierId === lease.cashierId
+          verified.has(record.id) ? "synced" : record.payload.cashierId === context.cashierId
             ? "pending"
             : "review_required",
         attempts: 0,
         nextAttempt: 0,
         updatedAt: Date.now(),
         error:
-          verified.has(record.id) || record.payload.cashierId === lease.cashierId
+          verified.has(record.id) || record.payload.cashierId === context.cashierId
             ? undefined
             : "Restored for owner review; original cashier authentication required",
       });

@@ -1,4 +1,5 @@
 import {randomUUID} from 'node:crypto';
+import {readFile} from 'node:fs/promises';
 import {createClient} from '@supabase/supabase-js';
 import {expect,test,type Page} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
@@ -63,6 +64,49 @@ test('blind first entry, independent recount and third-person owner approval com
   const retries=await Promise.all([countCommand(a.owner,'approve_count',original),countCommand(a.owner,'approve_count',original)]);expect(retries.every(r=>r.duplicate===true)).toBe(true);
   const movements=await a.owner.from('inventory_movements').select('id').eq('source_id',countId);expect(movements.data).toHaveLength(1);
  }finally{await context2.close();await context3.close();}
+});
+
+test('operation-only recovery moves a lost count response to a fresh signed-in browser while shifts stay closed',async({page,browser})=>{
+ const a=await fixture();await login(page,a.first);
+ await page.getByLabel('Counting scope / reason',{exact:true}).fill('TEST transferable recovery evidence');await page.getByRole('button',{name:'Start blind count',exact:true}).click();
+ await expect(page.getByRole('button',{name:'Seal first count',exact:true})).toBeVisible();
+ const ctx={organizationId:a.organizationId,branchId:a.branchId};
+ const initial=await countCommand<{rows:BlindCount[]}>(a.first.owner,'count_workspace',ctx);const countId=initial.rows[0].id;
+ let lost=false;await page.route('**/rest/v1/rpc/agri_command',async route=>{
+  if(route.request().postDataJSON().action==='record_blind_count'&&!lost){const response=await route.fetch();expect(response.ok()).toBe(true);lost=true;await route.abort('failed');}else await route.continue();
+ });
+ await page.getByLabel('First physical quantity (kg)',{exact:true}).fill('10.25');await page.getByLabel('First count notes',{exact:true}).fill('TEST original quarter kilo shortage');
+ await page.getByRole('button',{name:'Seal first count',exact:true}).click();await expect.poll(()=>lost).toBe(true);
+ await page.getByRole('button',{name:/^Sync center(?:\s+\d+)?$/}).click();
+ await expect(page.getByRole('button',{name:'Retry original request',exact:true})).toBeVisible();
+ const downloadPromise=page.waitForEvent('download');await page.getByRole('button',{name:'Export recovery file',exact:true}).click();
+ const download=await downloadPromise,content=await readFile((await download.path())!);
+ const file=JSON.parse(content.toString());expect(file.sales).toEqual([]);expect(file.pendingOperations).toHaveLength(1);
+ expect(file.pendingOperations[0].data.countId).toBe(countId);const observationId=file.pendingOperations[0].data.observationId;
+ const wrongContext=await browser.newContext(),restoredContext=await browser.newContext();
+ try{
+  const wrong=await wrongContext.newPage();await login(wrong,a.second);await wrong.getByRole('button',{name:/^Sync center(?:\s+\d+)?$/}).click();
+  const wrongInput=wrong.getByLabel('Restore a recovery file',{exact:true});await expect(wrongInput).toBeEnabled();
+  await wrongInput.setInputFiles({name:'TEST-original-count.json',mimeType:'application/json',buffer:content});
+  await expect(wrong.locator('.notice.error')).toContainText('owner must review another employee');
+  await expect(wrong.getByRole('button',{name:'Retry original request',exact:true})).toHaveCount(0);
+  const restored=await restoredContext.newPage();await login(restored,a.first);await restored.getByRole('button',{name:/^Sync center(?:\s+\d+)?$/}).click();
+  await restored.getByLabel('Restore a recovery file',{exact:true}).setInputFiles({name:'TEST-original-count.json',mimeType:'application/json',buffer:content});
+  await expect(restored.getByRole('button',{name:'Retry original request',exact:true})).toBeVisible();await restored.reload();
+  await restored.getByRole('button',{name:/^Sync center(?:\s+\d+)?$/}).click();
+  let retriedId='';await restored.route('**/rest/v1/rpc/agri_command',async route=>{if(route.request().postDataJSON().action==='record_blind_count')retriedId=route.request().postDataJSON().data.observationId;await route.continue();});
+  await restored.getByRole('button',{name:'Retry original request',exact:true}).click();
+  await expect(restored.getByRole('button',{name:'Retry original request',exact:true})).toHaveCount(0);expect(retriedId).toBe(observationId);
+  await restored.getByRole('button',{name:'Stock counts',exact:true}).click();await expect(restored.locator('.count-record')).toContainText('Independent recount needed');
+  for(const [width,height] of [[1440,1000],[390,844]]){
+   await restored.setViewportSize({width,height});await restored.getByRole('button',{name:/^Sync center(?:\s+\d+)?$/}).click();
+   expect(await restored.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+   expect((await new AxeBuilder({page:restored}).withTags(['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']).analyze()).violations).toEqual([]);
+   await restored.screenshot({path:`test-results/count-recovery-${width}.png`,fullPage:true});
+  }
+  const history=await a.owner.from('audit_events').select('id').eq('source_id',countId).eq('action','record_blind_count');expect(history.error).toBeNull();expect(history.data).toHaveLength(1);
+  const shifts=await a.owner.from('shifts').select('id').eq('organization_id',a.organizationId);expect(shifts.error).toBeNull();expect(shifts.data).toEqual([]);
+ }finally{await wrongContext.close();await restoredContext.close();}
 });
 
 test('lost sealed-count response recovers its original observation without a second entry',async({page})=>{

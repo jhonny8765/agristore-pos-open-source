@@ -2909,7 +2909,7 @@ export function StoreApp() {
                   <input
                     type="file"
                     accept="application/json,.json"
-                    disabled={!lease || busy || !online}
+                    disabled={busy || !online}
                     onChange={(e) => {
                       const file = e.target.files?.[0];
                       if (!file) return;
@@ -2927,9 +2927,10 @@ export function StoreApp() {
                           db,
                           input,
                           confirmed,
+                          {organizationId:member.organizationId,branchId,cashierId:member.userId,role:member.role},
                         );
                         notify(
-                          `${count} records checked and restored. Original transaction IDs are retained.`,
+                          `${count} sale records checked and restored. Original transaction IDs and online requests are retained. Review the Sync center before retrying.`,
                         );
                       });
                     }}
@@ -2945,7 +2946,9 @@ export function StoreApp() {
                 </Button>
                 <p>
                   Contains transaction records. Keep this file private. Pending
-                  sales are retained when you sign out.
+                  sales are retained when you sign out. Operation-only files can
+                  be restored while shifts stay closed. Sale files require an
+                  authorized cashier shift.
                 </p>
               </div>
             </>

@@ -7,8 +7,8 @@ import {
   pendingOperations,
   retryOperation,
 } from "../../apps/web/lib/operations";
-import { setupDB, uuid } from "./fixtures";
-import { PosDatabase } from "@agristore/offline";
+import { setupDB, uuid, sale } from "./fixtures";
+import { PosDatabase, exportRecovery, importRecovery, setSetting } from "@agristore/offline";
 const databases: PosDatabase[] = [];
 const body = {
   organizationId: uuid(1),
@@ -38,6 +38,69 @@ function deferred<T>() {
   return { promise, resolve, reject };
 }
 describe("online inventory operation recovery", () => {
+  it.each([
+    {action:"start_blind_count",data:{productId:uuid(10),batchId:null,reason:"TEST blind count"},idField:"countId"},
+    {action:"record_blind_count",data:{countId:uuid(91),stage:"first",quantity:"0.25",notes:"TEST first weight"},idField:"observationId"},
+    {action:"record_blind_count",data:{countId:uuid(91),stage:"recount",quantity:"0.25",notes:"TEST independent weight"},idField:"observationId"},
+    {action:"approve_count",data:{countId:uuid(91),reason:"TEST independent approval"}},
+    {action:"cancel_blind_count",data:{countId:uuid(91),reason:"TEST stock changed"}},
+    {action:"create_branch",data:{name:"TEST new branch"},idField:"newBranchId"},
+  ])("restores an interrupted $action with its original identity and fingerprint",async({action,data,idField})=>{
+    const source=await db(),target=await db();
+    const request={organizationId:uuid(1),...(action==='create_branch'?{}:{branchId:uuid(2)}),...data};
+    vi.mocked(command).mockRejectedValueOnce(new Error("TEST committed response lost"));
+    await expect(onlineOperation(source,uuid(4),action,request,idField)).rejects.toThrow("response lost");
+    const original=(await pendingOperations(source))[0];
+    const file=await exportRecovery(source,{organizationId:uuid(1),branchId:uuid(2),cashierId:uuid(4)});
+    expect(file.pendingOperations).toHaveLength(1);
+    await importRecovery(target,file);await importRecovery(target,file);
+    const restored=(await pendingOperations(target))[0];
+    expect(restored).toEqual(original);
+    vi.mocked(command).mockResolvedValueOnce({ok:true});
+    await onlineOperation(target,uuid(4),action,request,idField);
+    expect(vi.mocked(command).mock.calls.at(-1)).toEqual([action,original.data]);
+    expect(await pendingOperations(target)).toHaveLength(0);
+    expect(await pendingOperations(source)).toEqual([original]);
+  });
+  it("restores operation-only evidence for a signed-in stock counter without opening a shift",async()=>{
+    const source=await db(),target=await db();
+    vi.mocked(command).mockRejectedValueOnce(new Error("TEST response lost"));
+    await expect(onlineOperation(source,uuid(4),'record_blind_count',{organizationId:uuid(1),branchId:uuid(2),countId:uuid(91),stage:'first',quantity:'0.25',notes:'TEST net weight'},'observationId')).rejects.toThrow();
+    const file=await exportRecovery(source,{organizationId:uuid(1),branchId:uuid(2),cashierId:uuid(4)});
+    await target.settings.delete('lease');
+    await importRecovery(target,file,[],{organizationId:uuid(1),branchId:uuid(2),cashierId:uuid(4),role:'stock_staff'});
+    expect(await pendingOperations(target)).toEqual(await pendingOperations(source));
+    expect(await target.settings.get('lease')).toBeUndefined();
+    await expect(importRecovery(target,file,[],{organizationId:uuid(1),branchId:uuid(2),cashierId:uuid(6),role:'stock_staff'})).rejects.toThrow(/original employee|owner/);
+    await expect(importRecovery(target,file,[],{organizationId:uuid(1),branchId:uuid(99),cashierId:uuid(4),role:'stock_staff'})).rejects.toThrow(/another business or branch/);
+  });
+  it("cannot replace an original employee's unresolved operation with another actor",async()=>{
+    const source=await db(),target=await db();
+    const data={organizationId:uuid(1),branchId:uuid(2),countId:uuid(91),reason:'TEST approval'};
+    vi.mocked(command).mockRejectedValue(new Error('TEST lost response'));
+    await expect(onlineOperation(source,uuid(4),'approve_count',data)).rejects.toThrow();
+    await expect(onlineOperation(target,uuid(6),'approve_count',data)).rejects.toThrow();
+    await setSetting(target,'lease',{organizationId:uuid(1),branchId:uuid(2),cashierId:uuid(4),role:'owner',issuedAt:Date.now()-1000,expiresAt:Date.now()+10000});
+    const before=await pendingOperations(target);
+    await expect(importRecovery(target,await exportRecovery(source))).rejects.toThrow(/operation.*confirmation/i);
+    expect(await pendingOperations(target)).toEqual(before);
+  });
+  it("keeps sale restoration shift-authorized even when operation-only recovery is allowed",async()=>{
+    const target=await db();await target.settings.delete('lease');
+    await expect(importRecovery(target,{version:1,sales:[{payload:sale()}]},[],{organizationId:uuid(1),branchId:uuid(2),cashierId:uuid(4),role:'stock_staff'})).rejects.toThrow('Open a shift');
+    expect(await target.sales.count()).toBe(0);
+  });
+  it("rejects conflicting operation identities in one archive before writing either",async()=>{
+    const target=await db();
+    const op={action:'approve_count',actorId:uuid(4),data:{organizationId:uuid(1),branchId:uuid(2),countId:uuid(91),reason:'TEST original approval'}};
+    await expect(importRecovery(target,{version:1,sales:[],pendingOperations:[op,{...op,actorId:uuid(6)}]},[],{organizationId:uuid(1),branchId:uuid(2),cashierId:uuid(4),role:'owner'})).rejects.toThrow('conflicting operations');
+    expect(await pendingOperations(target)).toEqual([]);
+  });
+  it.each(['2',3,null])("rejects unsupported recovery version %s before writing",async(version)=>{
+    const target=await db();
+    await expect(importRecovery(target,{version,sales:[]})).rejects.toThrow('Invalid recovery file');
+    expect(await target.sales.count()).toBe(0);
+  });
   it("two windows reuse one durable ID for the same unconfirmed delivery", async () => {
     const first = await db();
     const second = new PosDatabase(first.name);
