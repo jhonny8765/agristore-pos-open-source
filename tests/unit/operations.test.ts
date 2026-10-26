@@ -8,7 +8,7 @@ import {
   retryOperation,
 } from "../../apps/web/lib/operations";
 import { setupDB, uuid, sale } from "./fixtures";
-import { PosDatabase, exportRecovery, importRecovery, setSetting } from "@agristore/offline";
+import { PosDatabase, exportRecovery, importRecovery, saveCheckout, setSetting } from "@agristore/offline";
 const databases: PosDatabase[] = [];
 const body = {
   organizationId: uuid(1),
@@ -38,6 +38,36 @@ function deferred<T>() {
   return { promise, resolve, reject };
 }
 describe("online inventory operation recovery", () => {
+  it("round-trips a serialized pending sale with optional metadata and retains its permanent identity", async () => {
+    const source = await db(), target = await db();
+    const original = await saveCheckout(source, sale());
+    await source.sales.update(original.id, { error: undefined });
+    const file = JSON.parse(JSON.stringify(await exportRecovery(source, { organizationId: uuid(1), branchId: uuid(2), cashierId: undefined })));
+    await importRecovery(target, file, [], { organizationId: uuid(1), branchId: uuid(2), cashierId: uuid(4), role: "owner" });
+    const restored = await target.sales.get(original.id);
+    expect(restored?.id).toBe(original.id);
+    expect(restored?.payload).toEqual(original.payload);
+    expect(restored?.fingerprint).toBe(original.fingerprint);
+  });
+  it.each([true, false])("round-trips a serialized owner recovery file with optional fields (scoped: %s)", async (scoped) => {
+    const source = await db(), target = await db();
+    const data = { organizationId: uuid(1), branchId: uuid(2), exceptionId: uuid(91), expectedVersion: 0, assigneeId: uuid(4), dueOn: "2026-11-01", reason: "TEST inspect original documents" };
+    vi.mocked(command).mockRejectedValueOnce(new Error("TEST response lost"));
+    await expect(onlineOperation(source, uuid(4), "assign_stock_exception", data, "followUpId")).rejects.toThrow();
+    const original = (await pendingOperations(source))[0];
+    await setSetting(source, original.key, { ...original, error: undefined });
+    const scope = scoped ? { organizationId: uuid(1), branchId: uuid(2), cashierId: undefined } : undefined;
+    const downloaded = JSON.parse(JSON.stringify(await exportRecovery(source, scope)));
+    await target.settings.delete("lease");
+    await importRecovery(target, downloaded, [], { organizationId: uuid(1), branchId: uuid(2), cashierId: uuid(4), role: "owner" });
+    const restored = (await pendingOperations(target))[0];
+    expect(restored.data).toEqual(original.data);
+    expect(restored.fingerprint).toBe(original.fingerprint);
+    vi.mocked(command).mockResolvedValueOnce({ duplicate: true });
+    await retryOperation(target, uuid(4), restored);
+    expect(vi.mocked(command).mock.calls.at(-1)).toEqual(["assign_stock_exception", original.data]);
+    expect(await pendingOperations(target)).toHaveLength(0);
+  });
   it.each([
     {action:"assign_stock_exception",data:{exceptionId:uuid(91),assigneeId:uuid(4),dueOn:"2026-11-01",expectedVersion:0,reason:"TEST inspect supplier records"},idField:"followUpId"},
     {action:"note_stock_exception",data:{exceptionId:uuid(91),expectedVersion:1,reason:"TEST inspection still pending"},idField:"followUpId"},

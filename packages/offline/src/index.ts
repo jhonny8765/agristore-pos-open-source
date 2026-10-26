@@ -415,8 +415,12 @@ export async function exportRecoveryPart(db: PosDatabase, archiveId: string, par
   if (!Number.isInteger(part) || part < 1 || part > parts) throw new Error("Invalid recovery part");
   const records = await db.sales.bulkGet(archive.ids.slice((part-1)*RECOVERY_PART_SIZE, part*RECOVERY_PART_SIZE));
   if (records.some(s => !s)) throw new Error("A source record is unavailable. Keep earlier recovery parts and ask the owner to investigate.");
-  const body = { sales: records as LocalSale[], pendingOperations: part === 1 ? archive.operations : [] };
-  const manifest = { id: archive.id, part, parts, totalRecords: archive.ids.length, recordCount: records.length, scope: archive.scope };
+  // Hash the JSON representation actually written to disk. Optional undefined
+  // fields (notably an owner's unrestricted cashier scope) disappear in JSON.
+  // Do not change sale or operation fingerprints: their identities are retained.
+  const body: { sales: LocalSale[]; pendingOperations: unknown[] } = JSON.parse(JSON.stringify({ sales: records, pendingOperations: part === 1 ? archive.operations : [] }));
+  const manifest = { id: archive.id, part, parts, totalRecords: archive.ids.length, recordCount: records.length,
+    ...(archive.scope ? { scope: JSON.parse(JSON.stringify(archive.scope)) as RecoveryScope } : {}) };
   const result = { version: 2, exportedAt: archive.exportedAt, archive: manifest,
     ...body, checksum: await checksum({archive:manifest,...body}), lease: archive.lease };
   if (part === parts) await db.settings.delete(`recovery:${archive.id}`); // IDs only; saved sales are never removed.
