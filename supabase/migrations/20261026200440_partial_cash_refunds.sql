@@ -48,7 +48,7 @@ end$$;
 revoke all on function app_private.partial_refund_plan(uuid,uuid,uuid) from public,anon,authenticated;
 
 create function app_private.partial_refund_quote(plan jsonb,items jsonb) returns jsonb language plpgsql stable set search_path='' as $$
-declare r jsonb;l jsonb;v_rows jsonb:='[]';q numeric;t numeric;a numeric;h numeric;f numeric;v_amount bigint;v_total bigint:=0;d text;
+declare r jsonb;l jsonb;v_rows jsonb:='[]'::jsonb;q numeric;t numeric;a numeric;h numeric;f numeric;v_amount bigint;v_total bigint:=0;d text;
 begin
  if jsonb_typeof(items) is distinct from 'array' or jsonb_array_length(items) not between 1 and 100 then raise exception 'Select at least one original sale line';end if;
  if (select count(distinct e->>'lineIndex') from jsonb_array_elements(items)e)<>jsonb_array_length(items) then raise exception 'Each original line can appear only once';end if;
