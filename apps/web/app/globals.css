@@ -338,7 +338,7 @@ form > .button {
   object-fit: contain;
   flex-shrink: 0;
   border-radius: 4px;
-  background: white;
+  background: transparent;
 }
 .wordmark small,
 .small-brand small {
