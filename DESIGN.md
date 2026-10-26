@@ -123,3 +123,6 @@ Source evidence: `apps/web/app/globals.css` and the authentication section of `a
 - **Don't** introduce company photography, company logos or business-specific identity copy into the public edition.
 - **Don't** add a white logo backing or use a raster replacement for the original mark.
 - **Don't** treat this sign-in branding capture as a new palette, illustration system or identity redesign.
+
+## Stock reminder worklists
+Use the existing Inventory panels, ruled tables and responsive stock-control rows. Keep lot, expiry, exact base quantities and separately held goods together. Show the snapshot time, online refresh action, totals and bounded-page continuation. Missing expiry is an inspection warning. Responsible employee, due/overdue status, assignment instructions and latest progress belong beside the source evidence. Use native labelled controls and inline approval forms; keep manager assignment separate from owner-only resolution. Preserve entered/pending work on failed writes, and keep recorded success distinct from refresh failures. Dropdown accessible names reference their visible labels explicitly; refresh controls wrap at narrow widths.

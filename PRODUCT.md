@@ -11,3 +11,6 @@ PHP currency; Asia/Manila time. Online login/device setup/shift opening before b
 
 ## Public edition
 Generic identity and synthetic examples only. No private company artwork, production credentials, store datasets or business incident records. Hardware and production backup acceptance remain unpassed.
+
+## Stock follow-up workflow
+Connected Inventory worklists show recorded expiry and unresolved investigations with explicit snapshot times. Owners and branch managers assign an active authorized employee and due date; assignees can record progress. Assignments and progress leave cases open and stock unchanged. Only the owner resolves an investigation with evidence. Staff/hardware and real opening-data acceptance remain separate.

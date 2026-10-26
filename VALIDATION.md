@@ -1,5 +1,13 @@
 # Verification evidence
 
+## Expiry and assigned-investigation follow-up
+
+October 26, 2026. Application source `8d35022` passed both jobs of [40299113349](https://github.com/jhonny8765/agristore-pos-open-source/actions/runs/40299113349): **182 unit checks, 22 practice-browser scenarios, 19 real Auth/database browser scenarios, 273 database assertions, warning-failing database lint, type checks, application lint, optimized builds and the expanded 25-table restore**.
+
+The new genuine sign-in flow verifies lot-expiry reminders, configurable windows and filters, independent employee progress, owner-only resolution, unchanged physical quantities and desktop/narrow accessibility. Another flow loses a committed assignment response, exports its saved operation, restores the downloaded JSON under the same owner in a fresh browser with shifts closed and retries its original ID. Exactly one immutable assignment event remains. The restore drill now also preserves assigned deadlines and progress across dump/restore and idempotent replay.
+
+The checks first exposed an unused database variable, ambiguous select labels, a narrow refresh-control overflow and an owner recovery-file checksum mismatch after optional fields disappeared during JSON serialization. Each was corrected without loosening lint, containment, permission or checksum validation. Export hashes the actual JSON written to disk while retaining permanent request IDs and existing fingerprints. The complete linked run passed afterward. Reminders and follow-up notes do not change stock or establish why a shortage occurred. See [the operating guide](docs/expiry-and-investigations.md); real staff/hardware and production backup gates remain open.
+
 ## Grams-first checkout follow-up
 
 October 26, 2026. Application source `daa74b2` passed the complete [40265497302](https://github.com/jhonny8765/agristore-pos-open-source/actions/runs/40265497302): 175 unit checks, 22 practice-browser scenarios, 17 real database-connected browser scenarios, 222 database assertions, database lint, type checks, application lint, optimized builds and the disposable backup/restore drill.
