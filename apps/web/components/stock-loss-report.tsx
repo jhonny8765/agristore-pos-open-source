@@ -76,7 +76,7 @@ export function StockLossReport({ db, organizationId, branchId, branchName, acto
         <label className="field"><span>Loss report from date</span><input type="date" value={draft.fromDate} onChange={e => setDraft({ ...draft, fromDate: e.target.value })} /></label>
         <label className="field"><span>Loss report through date</span><input type="date" value={draft.throughDate} onChange={e => setDraft({ ...draft, throughDate: e.target.value })} /></label>
         <label className="field"><span id={`${id}-category`}>Removal category</span><select aria-labelledby={`${id}-category`} value={draft.filter} onChange={e => setDraft({ ...draft, filter: e.target.value })}><option value="loss">Posted losses / write-offs</option><option value="other_removal">Authorised use / supplier returns</option><option value="all">All recorded removals</option></select></label>
-        {owner && <label className="checkbox-field"><input type="checkbox" checked={draft.allBranches} onChange={e => setDraft({ ...draft, allBranches: e.target.checked })} />Report all branches</label>}
+        {owner && <label className="checkbox"><input type="checkbox" checked={draft.allBranches} onChange={e => setDraft({ ...draft, allBranches: e.target.checked })} />Report all branches</label>}
         <Button disabled={blocked}>Apply loss-report filters</Button>
       </form>
       {feedback && <p className="notice success" role="status">{feedback}</p>}
@@ -106,7 +106,7 @@ export function StockLossReport({ db, organizationId, branchId, branchName, acto
               <label className="field"><span id={`${id}-unit-${row.loss_key}`}>Purchase-cost unit</span><select name="unit" aria-labelledby={`${id}-unit-${row.loss_key}`} required defaultValue=""><option value="">Choose the unit on your document</option>{product.units.map(unit => <option key={unit.id} value={unit.id}>{unit.name} · {unit.factor} {product.baseUnit}</option>)}</select></label>
               <label className="field"><span>Purchase cost per selected unit (₱)</span><input name="cost" inputMode="decimal" autoComplete="off" required /></label>
               <label className="field"><span>Purchase-cost document reference</span><input name="reference" required minLength={3} maxLength={200} /></label>
-              <label className="checkbox-field"><input name="zero" type="checkbox" />Document confirms zero acquisition cost</label>
+              <label className="checkbox"><input name="zero" type="checkbox" />Document confirms zero acquisition cost</label>
             </ApprovalForm>}
             <CostHistory organizationId={organizationId} row={row} asOf={data.asOf} online={online} />
             </td>
