@@ -85,12 +85,12 @@ const rejectedDelivery={...ctx(),purchaseOrderId:id(41),supplierId:id(40),receip
 const supplierProgress={...ctx(),receiptId:id(44),claimEventId:id(45),expectedVersion:0,outcome:'progress',reference:'TEST-CLAIM-RESTORE',reason:'TEST supplier acknowledged rejected delivery'};
 const supplierResolution={...ctx(),receiptId:id(44),claimEventId:id(46),expectedVersion:1,outcome:'returned',reference:'TEST-RETURN-RESTORE',reason:'TEST owner checked supplier signed rejection'};
 command('create_purchase_order',purchaseOrder);command('purchase_order_event',orderApproval);command('inspect_delivery',rejectedDelivery);command('record_delivery_claim',supplierProgress);command('record_delivery_claim',supplierResolution);
-const reversedOrder={...ctx(6),purchaseOrderId:id(60),supplierId:id(40),reference:'TEST-RESTORE-REVERSED-PO',reason:'TEST untouched receipt correction',items:[{lineId:id(61),productId:id(4),unitId:id(7),quantity:'1'}]};
+const reversedOrder={...ctx(6),purchaseOrderId:id(60),supplierId:id(40),reference:'TEST-RESTORE-REVERSED-PO',reason:'TEST untouched receipt correction',items:[{lineId:id(61),productId:id(4),unitId:id(7),quantity:'0.5'}]};
 command('create_purchase_order',reversedOrder);command('purchase_order_event',{...ctx(6),purchaseOrderId:id(60),orderEventId:id(62),expectedState:'pending',outcome:'approve',reason:'TEST owner approved correction fixture'});
 const mistakenReceipt={...ctx(6),purchaseOrderId:id(60),supplierId:id(40),receiptId:id(63),reference:'TEST-RESTORE-MISTAKEN',reason:'TEST mistaken quantity in saved delivery',items:[{orderLineId:id(61),productId:id(4),unitId:id(7),documentQuantity:'0.5',accepted:'0.5',held:'0',rejected:'0',reason:'TEST original quantity'}]};
 command('inspect_delivery',mistakenReceipt);command('purchase_order_event',{...ctx(6),purchaseOrderId:id(60),orderEventId:id(64),expectedState:'approve',outcome:'close',reason:'TEST owner closed original commitment'});
 const reversePlan=command('delivery_reversal_check',{...ctx(6),receiptId:id(63)});
-const reversal={...ctx(6),receiptId:id(63),reversalId:id(65),expectedLedgerRevision:reversePlan.ledgerRevision,reference:'TEST signed restore correction',reason:'TEST owner physically verified mistaken receiving and synchronized PCs',physicalConfirmed:true,queuesConfirmed:true};
+const reversal={...ctx(6),receiptId:id(63),reversalId:id(65),expectedLedgerRevision:reversePlan.ledgerRevision,expectedOrderVersion:reversePlan.orderVersion,reference:'TEST signed restore correction',reason:'TEST owner physically verified mistaken receiving and synchronized PCs',physicalConfirmed:true,queuesConfirmed:true};
 command('reverse_delivery',reversal);
 const correctedReceipt={...mistakenReceipt,receiptId:id(66),reference:'TEST-RESTORE-CORRECTED',correctsInspectionId:id(63),expectedReversalId:id(65),reason:'TEST linked corrected actual goods',items:[{...mistakenReceipt.items[0],accepted:'0.25',held:'0.25',reason:'TEST actual quarter kilo saleable and quarter kilo held'}]};
 command('inspect_delivery',correctedReceipt);
@@ -140,7 +140,7 @@ try {
   assert.equal(command('reverse_delivery',reversal,database).duplicate,true);
   assert.equal(command('inspect_delivery',correctedReceipt,database).duplicate,true);
   const correctedPurchasing=command('purchasing_workspace',ctx(6),database);
-  assert.equal(correctedPurchasing.orders[0].state,'approve');assert.equal(correctedPurchasing.orders[0].lines[0].remaining,'0.5');
+  assert.equal(correctedPurchasing.orders[0].state,'approve');assert.equal(correctedPurchasing.orders[0].lines[0].remaining,'0');
   assert.equal(correctedPurchasing.deliveries.find(d=>d.id===id(63)).reversal.reopenedOrder,true);
   assert.equal(correctedPurchasing.deliveries.find(d=>d.id===id(66)).correctsInspectionId,id(63));
   const lossReport=command('stock_loss_report',ctx(),database);

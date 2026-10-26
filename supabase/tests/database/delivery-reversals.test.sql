@@ -26,7 +26,7 @@ create function pg_temp.stock() returns numeric language sql as $$select quantit
 create function pg_temp.claim(ident integer,outcome text default 'progress',version integer default 0) returns jsonb language sql as $$select pg_temp.ctx()||jsonb_build_object('receiptId',pg_temp.i(821),'claimEventId',pg_temp.i(ident),'expectedVersion',version,'outcome',outcome,'reference','TEST supplier credit CN-021','reason','TEST supplier evidence retained')$$;
 create temporary table saved_requests(name text primary key,data jsonb);grant all on saved_requests to authenticated;
 create function pg_temp.plan(receipt integer) returns jsonb language sql as $$select public.agri_command('delivery_reversal_check',pg_temp.ctx()||jsonb_build_object('receiptId',pg_temp.i(receipt)))$$;
-create function pg_temp.rev(receipt integer,ident integer) returns jsonb language sql as $$select pg_temp.ctx()||jsonb_build_object('receiptId',pg_temp.i(receipt),'reversalId',pg_temp.i(ident),'expectedLedgerRevision',pg_temp.plan(receipt)->>'ledgerRevision','reference','TEST signed correction sheet','reason','TEST owner verified mistaken entry and actual goods','physicalConfirmed',true,'queuesConfirmed',true)$$;
+create function pg_temp.rev(receipt integer,ident integer) returns jsonb language sql as $$select pg_temp.ctx()||jsonb_build_object('receiptId',pg_temp.i(receipt),'reversalId',pg_temp.i(ident),'expectedLedgerRevision',pg_temp.plan(receipt)->>'ledgerRevision','expectedOrderVersion',pg_temp.plan(receipt)->'orderVersion','reference','TEST signed correction sheet','reason','TEST owner verified mistaken entry and actual goods','physicalConfirmed',true,'queuesConfirmed',true)$$;
 create function pg_temp.unplanned(ident integer,quantity text default '0.5',held text default '0') returns jsonb language sql as $$select pg_temp.delivery(ident,quantity,held,'0',(quantity::numeric+held::numeric)::text)||jsonb_build_object('purchaseOrderId',null,'items',jsonb_build_array((pg_temp.delivery(ident,quantity,held,'0',(quantity::numeric+held::numeric)::text)->'items'->0)||jsonb_build_object('orderLineId',null)))$$;
 set local role authenticated;select pg_temp.login(11);
 select public.agri_command('create_purchase_order',pg_temp.po());select public.agri_command('purchase_order_event',pg_temp.decision());
@@ -67,8 +67,11 @@ insert into tap_results select is(pg_temp.stock(),600::numeric,'Correction chain
 insert into tap_results select is(pg_temp.work()->'orders'->0->'lines'->0->>'remaining','400','Correction chain cannot inflate fulfilled quantity');
 -- Close an order, then reverse its untouched receiving: reopen by an appended decision.
 select public.agri_command('create_purchase_order',pg_temp.po(870));select public.agri_command('purchase_order_event',pg_temp.decision(871,'approve','pending',870));
-select public.agri_command('inspect_delivery',pg_temp.delivery(872,'1','0','0','1')||jsonb_build_object('purchaseOrderId',pg_temp.i(870),'items',jsonb_build_array((pg_temp.delivery(872,'1','0','0','1')->'items'->0)||jsonb_build_object('orderLineId',pg_temp.i(970)))));
+select public.agri_command('inspect_delivery',pg_temp.delivery(872,'10','0','0','10')||jsonb_build_object('purchaseOrderId',pg_temp.i(870),'items',jsonb_build_array((pg_temp.delivery(872,'10','0','0','10')->'items'->0)||jsonb_build_object('orderLineId',pg_temp.i(970)))));
+insert into saved_requests values('orderPreview',pg_temp.rev(872,874));
 select public.agri_command('purchase_order_event',pg_temp.decision(873,'close','approve',870));
+insert into tap_results select throws_ok($$select public.agri_command('reverse_delivery',(select data from saved_requests where name='orderPreview'))$$,'P0001','Purchase order changed after the reversal check. Check it again before confirming','Order decisions invalidate the preview without a stock movement');
+insert into tap_results select is(pg_temp.plan(872)->>'orderVersion','2','Fresh preview carries current order decision version');
 insert into tap_results select is(pg_temp.plan(872)->>'reopensOrder','true','Preview explicitly identifies closed-order reopening');
 select public.agri_command('reverse_delivery',pg_temp.rev(872,874));
 insert into tap_results select is((select o->>'state' from jsonb_array_elements(pg_temp.work()->'orders')o where o->>'id'=pg_temp.i(870)::text),'approve','Closed order reopens through appended owner decision');
@@ -79,6 +82,16 @@ insert into tap_results select is(pg_temp.plan(875)->>'reopensOrder','false','Ze
 select public.agri_command('reverse_delivery',pg_temp.rev(875,877));
 insert into tap_results select is((select count(*) from public.inventory_movements where source_id=pg_temp.i(877)),0::bigint,'Rejected-only reversal has zero stock movements');
 insert into tap_results select is((select o->>'state' from jsonb_array_elements(pg_temp.work()->'orders')o where o->>'id'=pg_temp.i(870)::text),'close','Zero-stock reversal preserves the explicit order closure');
+-- A partly closed order must retain its cancelled remainder; no automatic reopen.
+select public.agri_command('create_purchase_order',pg_temp.po(910));select public.agri_command('purchase_order_event',pg_temp.decision(911,'approve','pending',910));
+select public.agri_command('inspect_delivery',pg_temp.delivery(912,'1','0','0','1')||jsonb_build_object('purchaseOrderId',pg_temp.i(910),'items',jsonb_build_array((pg_temp.delivery(912,'1','0','0','1')->'items'->0)||jsonb_build_object('orderLineId',pg_temp.i(1010)))));
+select public.agri_command('purchase_order_event',pg_temp.decision(913,'close','approve',910));
+insert into saved_requests values('beforePartial',jsonb_build_object('stock',pg_temp.stock(),'order',(select o from jsonb_array_elements(pg_temp.work()->'orders')o where o->>'id'=pg_temp.i(910)::text)));
+insert into tap_results select is(pg_temp.plan(912)->>'eligible','false','Deliberate partial closure blocks automatic reversal');
+insert into tap_results select is(pg_temp.plan(912)->>'reopensOrder','false','Blocked partial closure never promises reopening');
+insert into tap_results select throws_ok($$select public.agri_command('reverse_delivery',pg_temp.rev(912,914))$$,'P0001','This order was closed with an unreceived remainder. Owner reconciliation is required to avoid reviving cancelled quantities.','Cannot revive previously cancelled order quantities');
+insert into tap_results select is(pg_temp.stock(),((select data from saved_requests where name='beforePartial')->>'stock')::numeric,'Partial-closure rejection leaves stock unchanged');
+insert into tap_results select is((select o from jsonb_array_elements(pg_temp.work()->'orders')o where o->>'id'=pg_temp.i(910)::text),(select data->'order' from saved_requests where name='beforePartial'),'Partial-closure rejection preserves order status, quantities and decisions');
 -- Subsequent activity blocks the complete operation, even if net stock looks sufficient.
 select public.agri_command('inspect_delivery',pg_temp.unplanned(880));
 reset role;
