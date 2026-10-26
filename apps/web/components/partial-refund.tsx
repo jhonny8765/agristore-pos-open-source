@@ -1,5 +1,5 @@
 "use client";
-import {useState,useEffect,useRef} from "react";
+import {useState,useEffect,useRef,useId} from "react";
 import {money,partialRefundPreview,type PartialRefundPlan,type PartialRefundItem} from "@agristore/domain";
 import {PosDatabase,unresolvedStates} from "@agristore/offline";
 import {command} from "../lib/api";
@@ -10,6 +10,7 @@ type Draft={quantity:string;returnedQuantity:string;disposition:PartialRefundIte
 type HistoryRow={id:string;amount:number;reference:string;reason:string;created_at:string;lines:{lineIndex:number;quantity:string;returnedQuantity:string;saleableQuantity:string;heldQuantity:string;amount:number}[]};
 type History={rows:HistoryRow[];next:{at:string;id:string}|null};
 export function PartialRefundControl({db,organizationId,branchId,saleId,actorId,shiftId,disabled,readDisabled,execute}:{db:PosDatabase;organizationId:string;branchId:string;saleId:string;actorId:string;shiftId?:string;disabled:boolean;readDisabled:boolean;execute:(fn:()=>Promise<void>)=>Promise<Error|undefined|void>}){
+ const hint=useId();
  const detail=useRef<HTMLDivElement>(null);
  useEffect(()=>{detail.current?.focus();},[]);
  const [plan,setPlan]=useState<PartialRefundPlan>(),[drafts,setDrafts]=useState<Record<number,Draft>>({}),[review,setReview]=useState<ReturnType<typeof partialRefundPreview>>(),[reference,setReference]=useState(""),[error,setError]=useState(""),[feedback,setFeedback]=useState(""),[loading,setLoading]=useState(false),[history,setHistory]=useState<History>();
@@ -28,7 +29,7 @@ export function PartialRefundControl({db,organizationId,branchId,saleId,actorId,
      {plan.lines.map(l=><div className="refund-line" key={l.lineIndex}>
       <strong>Line {l.lineIndex+1}: {l.name}</strong><p>Sold {l.quantity} {l.unitName} · Already refunded {l.refundedQuantity} · Remaining {l.remainingQuantity}. Each {l.unitName} = {l.factor} {l.baseUnit}. Lot ID: {l.batchId??"No lot"}</p>
       {l.remainingQuantity==="0"?<p>This line is fully refunded.</p>:<>
-       <label className="field"><span>Refund quantity for line {l.lineIndex+1} ({l.unitName})</span><input inputMode="decimal" value={draft(l.lineIndex).quantity} onChange={e=>change(l.lineIndex,"quantity",e.target.value)}/><small>Leave blank for no refund on this line.</small></label>
+       <label className="field"><span>Refund quantity for line {l.lineIndex+1} ({l.unitName})</span><input aria-describedby={`${hint}-quantity-${l.lineIndex}`} inputMode="decimal" value={draft(l.lineIndex).quantity} onChange={e=>change(l.lineIndex,"quantity",e.target.value)}/></label><small id={`${hint}-quantity-${l.lineIndex}`}>Leave blank for no refund on this line.</small>
        <label className="field"><span>Physical returned quantity for line {l.lineIndex+1} ({l.unitName})</span><input inputMode="decimal" value={draft(l.lineIndex).returnedQuantity} onChange={e=>change(l.lineIndex,"returnedQuantity",e.target.value)}/></label>
        <label className="field"><span>Partial return disposition for line {l.lineIndex+1}</span><select value={draft(l.lineIndex).disposition} onChange={e=>change(l.lineIndex,"disposition",e.target.value)}><option value="not_returned">No goods returned (quantity zero)</option><option value="hold">Hold separately for inspection</option><option value="resalable">Inspected and saleable</option><option value="mixed">Split between saleable and held goods</option></select></label>
        {draft(l.lineIndex).disposition==="mixed"&&<label className="field"><span>Partial saleable portion for line {l.lineIndex+1} ({l.unitName})</span><input inputMode="decimal" value={draft(l.lineIndex).resalableQuantity} onChange={e=>change(l.lineIndex,"resalableQuantity",e.target.value)}/></label>}
