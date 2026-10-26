@@ -1,5 +1,15 @@
 # Verification evidence
 
+## Documented purchase-cost stock-loss reports
+
+October 26, 2026. Application/test source `5198d21` passed both jobs of [40326154860](https://github.com/jhonny8765/agristore-pos-open-source/actions/runs/40326154860): **186 unit checks, 22 practice-browser scenarios, 21 real Auth/database browser scenarios, 330 database assertions, warning-failing database lint, type checks, application lint, optimized builds and the expanded 26-table restore**.
+
+Two new genuine sign-in scenarios cover a quarter-kilo shortage valued at documented cost per 50 kg sack, retained corrections, exact CSV values, unchanged physical stock, manager read scope, accessible desktop/390/320 px forms and original-ID recovery after a committed cost response is deliberately lost. A fresh signed-in browser restores the exported JSON and retries the original request; exactly one cost record and one audit event remain.
+
+The 57 new database assertions additionally cover unit conversions, unknown versus explicitly documented zero costs, immediate session revocation, owner/manager/branch/organization boundaries, source validation, stale corrections, immutable history and bounded pagination. Holds and outstanding transfers are not automatically losses; approved disposal/transfer shortages are counted once. Authorised use is reported separately. Two half-cent rows verify per-row rounding to two total centavos. The restore drill preserves documentary cost evidence, its source, value and original retry across all 26 retained-table fingerprints, with zero ledger/projection differences.
+
+The report uses owner-documented acquisition cost per posted removal and unit-factor snapshots. It does not silently use current retail/catalog prices, implement automatic FIFO/weighted-average accounting, verify source authenticity or establish why goods are missing. A missing cost remains explicitly unvalued. Recorded-time cutoffs are not a locked accounting close across separate requests. This report's latency has not been benchmarked against a year-sized hosted dataset. See [the operating guide](docs/purchase-cost-loss-reports.md). Actual documents, hardware endurance, physical counts, real backup restoration and a reconciled pilot remain operational gates.
+
 ## Expiry and assigned-investigation follow-up
 
 October 26, 2026. Application source `8d35022` passed both jobs of [40299113349](https://github.com/jhonny8765/agristore-pos-open-source/actions/runs/40299113349): **182 unit checks, 22 practice-browser scenarios, 19 real Auth/database browser scenarios, 273 database assertions, warning-failing database lint, type checks, application lint, optimized builds and the expanded 25-table restore**.
