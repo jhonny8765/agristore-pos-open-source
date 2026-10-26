@@ -9,6 +9,7 @@ This edition contains generic branding and synthetic fixtures. It includes no pr
 - Cash checkout in Philippine pesos, integer centavos, exact sack/kg conversions, fractional weights and actual-weight confirmation for peso requests.
 - Offline checkout for an already authorized cashier/shift, durable IndexedDB transactions, permanent checkout UUIDs, idempotent server processing and recoverable synchronization.
 - Append-only stock movements, purchasing, lots/expiry, separate transfer dispatch/receipt, held stock and owner-approved stock issues.
+- Owner-only [delivery reversals and linked corrections](docs/delivery-reversals.md) for untouched saved inspections, with exact stock/hold/order effects and original-request recovery. Later activity and deliberate partial order closures block automatic reversal.
 - Blind physical counts: two separate counter accounts seal observations; an owner who entered neither approves. Disagreement, intervening stock movements, revoked access and self-approval block adjustments. Original evidence remains immutable.
 - Cash reconciliation, full financial refunds with separate physical-return disposition, paginated records and recovery exports.
 - Branch/organization permissions, current-session checks, RPC-only mutations and private privileged functions.

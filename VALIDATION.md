@@ -1,5 +1,18 @@
 # Verification evidence
 
+## Guarded saved-delivery reversals
+
+October 27, 2026. Source `3b447ee` passed both jobs of [40390573175](https://github.com/jhonny8765/agristore-pos-open-source/actions/runs/40390573175): **195 unit tests, 22 practice-browser scenarios, 27 genuine Supabase/Auth browser scenarios, 493 pgTAP assertions, warning-failing database lint, type checks, application lint, optimized builds and a 36-table dump/restore**. All existing gates remain enabled.
+
+Four new genuine sign-in scenarios verify owner-only full reversal of untouched inspections, cancellation of separate saleable/held quantities, exact order remainders, one linked corrected inspection, CSV historical status, later-sale rejection and desktop/390/320 px accessibility. A deliberately lost committed response is exported and restored in a fresh browser under the original owner; its permanent ID produces exactly one reversal and one opposite entry per original movement. Simultaneous same-ID and competing-ID requests cannot duplicate stock effects. An order decision after preview invalidates confirmation; a fresh preview can explicitly reopen a fully received closed order. A partly received closed order instead stays blocked, preserving deliberately cancelled quantities.
+
+The 93 new reversal database assertions also cover original evidence and lineage immutability, correction chains, rejected-only zero-stock corrections, stale previews, later stock/count/hold/supplier/investigation activity, whole-request rollback, role/branch/organization/session boundaries, exact product/lot inverse quantities and recorded-time reconciliation. The 36-table restore retains reversal and correction links, reopened order quantities, original retries and subsequent corrected-hold release, with zero ledger/projection differences. Receiving corrections do not create financial stock losses or supplier credits.
+
+One intermediate run timed out in an older count-approval scenario; strict diagnostics were added without weakening the existing assertion. The following complete run and final order-guard run passed that case; its cause was not established, so this is not claimed as a count fix. Purchasing-table overflow found in manual review was corrected without changing other screens. A generated guard migration initially failed local preflight syntax validation and was corrected before passing all 493 preflight assertions and the genuine gate; no failed migration was released.
+
+See [the owner procedure](docs/delivery-reversals.md). Only untouched inspected deliveries qualify: older quick receipts, opening imports, dependent history and partly closed orders require owner reconciliation. The owner must account for every branch PC, synchronize all records, close shifts and physically check goods. The server cannot discover never-uploaded offline sales or verify physical truth. Real staff rehearsal, selected-PC storage/endurance/restarts, scales/printers, actual cloud-backup restoration and a reconciled pilot remain required. No paid runner or billing change was used.
+
+
 ## Purchase orders and delivery inspection
 
 October 27, 2026. Shared application source `7611121` passed both jobs of [40370637294](https://github.com/jhonny8765/agristore-pos-open-source/actions/runs/40370637294): **193 unit checks, 22 practice-browser scenarios, 23 genuine Supabase/Auth browser scenarios, 400 pgTAP assertions, warning-failing database lint, type checks, application lint, optimized builds and the expanded 35-table dump/restore**. Follow-up source `e744c2d` adds the dedicated supplier foreign-key lookup index.
