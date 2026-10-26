@@ -2657,7 +2657,7 @@ export function StoreApp() {
                             <span className="status-tag">Refunded</span>
                           ) : (
                             <>
-                            {Array.isArray(s.sale_partial_refunds)&&s.sale_partial_refunds.length>0&&<p className="status-tag">Refund recorded � check details</p>}
+                            {Array.isArray(s.sale_partial_refunds)&&s.sale_partial_refunds.length>0&&<p className="status-tag">Refund recorded · check details</p>}
                             {isOwner&&<Button size="sm" variant="outline" disabled={!online||busy} onClick={()=>setPartialRefundSaleId(String(s.id))}>Partial refund</Button>}
                             {isOwner && (!Array.isArray(s.sale_partial_refunds)||s.sale_partial_refunds.length===0) && (
                               <ApprovalForm
