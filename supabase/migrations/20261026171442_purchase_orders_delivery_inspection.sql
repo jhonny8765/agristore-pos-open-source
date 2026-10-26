@@ -242,6 +242,7 @@ begin
    factor:=coalesce(factor,un.factor);dq:=app_private.purchasing_quantity(item->>'documentQuantity');aq:=app_private.purchasing_quantity(item->>'accepted');hq:=app_private.purchasing_quantity(item->>'held');rq:=app_private.purchasing_quantity(item->>'rejected');
    if dq+aq+hq+rq<=0 then raise exception 'A delivery line needs documented or physically inspected goods';end if;
    if scale(trim_scale(dq*factor))>6 or scale(trim_scale(aq*factor))>6 or scale(trim_scale(hq*factor))>6 or scale(trim_scale(rq*factor))>6 or (prod.base_unit='piece' and (dq*factor<>trunc(dq*factor) or aq*factor<>trunc(aq*factor) or hq*factor<>trunc(hq*factor) or rq*factor<>trunc(rq*factor))) then raise exception 'Converted delivery quantities must be exact and whole for pieces';end if;
+   if length(coalesce(item->>'reason',''))>1000 or length(coalesce(item->>'lot',''))>180 then raise exception 'Keep inspection notes within 1000 characters and lot identifiers within 180';end if;
    if hq>0 or rq>0 or dq<>aq+hq+rq then
     has_difference:=true;
     if length(btrim(coalesce(item->>'reason',''))) not between 3 and 1000 then raise exception 'Explain held, rejected or document-difference quantities';end if;
@@ -270,7 +271,7 @@ begin
    insert into app_private.delivery_inspection_lines(organization_id,inspection_id,order_line_id,product_id,unit_id,batch_id,hold_id,line_no,product_name,unit_name,base_unit,factor,document_quantity,accepted,held,rejected,reason,reported_lot,reported_expiry)
     values(org,ident,line_id,prod.id,un.id,batch,hold_id,n,prod.name,un.name,prod.base_unit,factor,dq,aq,hq,rq,coalesce(item->>'reason',''),v_lot,expiry);
   end loop;
-  if has_difference then insert into public.stock_exceptions(organization_id,branch_id,kind,source_id,details) values(org,branch,'delivery_difference',ident,jsonb_build_object('reference',v_reference,'note',note,'items',data->'items'));end if;
+  if has_difference then insert into public.stock_exceptions(organization_id,branch_id,kind,source_id,details) values(org,branch,'delivery_difference',ident,jsonb_build_object('reference',v_reference,'note',note,'items',data->'items','purchasingInspection',true));end if;
  elsif action='record_delivery_claim' then
   ident:=(data->>'claimEventId')::uuid;
   if ident is null then raise exception 'A permanent claim event ID is required';end if;
