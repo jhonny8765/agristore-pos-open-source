@@ -37,7 +37,7 @@ declare
  today date:=timezone('Asia/Manila',now())::date; horizon integer:=coalesce((data->>'horizonDays')::integer,30);
  filter text:=coalesce(data->>'filter','all'); expiry_filter text:=coalesce(data->>'expiryFilter','all');
  cursor_at timestamptz; cursor_id uuid; expiry_date date; expiry_product uuid; expiry_batch uuid;
- result jsonb; cases jsonb; expiry jsonb; staff jsonb; totals jsonb; expiry_totals jsonb; ident uuid; due date; note text:=btrim(data->>'reason');
+ cases jsonb; expiry jsonb; staff jsonb; totals jsonb; expiry_totals jsonb; ident uuid; due date; note text:=btrim(data->>'reason');
 begin
  if action not in ('stock_followups','assign_stock_exception','note_stock_exception') then return app_private.command_before_followups(action,data); end if;
  if uid is null or coalesce((auth.jwt()->>'is_anonymous')::boolean,false) or not exists(
