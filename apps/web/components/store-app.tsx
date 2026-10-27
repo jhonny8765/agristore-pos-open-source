@@ -2654,7 +2654,7 @@ export function StoreApp() {
                           {s.sale_reversals &&
                           (!Array.isArray(s.sale_reversals) ||
                             s.sale_reversals.length > 0) ? (
-                            <><span className="status-tag">Refunded</span>{Array.isArray(s.sale_refund_corrections)&&s.sale_refund_corrections.length>0&&<p>Correction recorded · check details</p>}{isOwner&&<Button size="sm" variant="outline" disabled={!online||busy} onClick={()=>setPartialRefundSaleId(String(s.id))}>Refund details</Button>}</>
+                            <><span className="status-tag">{Array.isArray(s.sale_refund_corrections)&&s.sale_refund_corrections.length>0?"Refund corrected · check details":"Refunded"}</span>{isOwner&&<Button size="sm" variant="outline" disabled={!online||busy} onClick={()=>setPartialRefundSaleId(String(s.id))}>Refund details</Button>}</>
                           ) : (
                             <>
                             {Array.isArray(s.sale_partial_refunds)&&s.sale_partial_refunds.length>0&&<p className="status-tag">Refund recorded · check details</p>}
