@@ -1,5 +1,19 @@
 import Decimal from "decimal.js";
 import type { Product } from "@agristore/domain";
+import { historicalStock } from "./stock-history";
+
+/** Server record details keep stock identity available in a stale cashier window. */
+export function stockControlIdentity(products:readonly Product[],row:Record<string,unknown>){
+ const cached=historicalStock(products,row);
+ const text=(value:unknown)=>typeof value==="string"&&value.trim()?value:null;
+ const unit=text(row.base_unit),lot=text(row.lot);
+ return {
+  name:text(row.product_name)??cached.name,
+  lot:row.batch_id&&lot?`Lot ${lot}`:cached.lot,
+  expiresOn:row.batch_id&&lot?(text(row.expires_on)??null):cached.expiresOn,
+  baseUnit:unit&&["kg","liter","meter","piece"].includes(unit)?unit:cached.baseUnit,
+ };
+}
 
 export function preferredBatch(product: Product, stock: Map<string,string>, today: string) {
   const available = product.batches.filter(b => (!b.expiresOn || b.expiresOn >= today) &&

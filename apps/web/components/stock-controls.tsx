@@ -6,7 +6,7 @@ import type { Product } from "@agristore/domain";
 import type { PosDatabase } from "@agristore/offline";
 import { command } from "../lib/api";
 import { onlineOperation } from "../lib/operations";
-import { historicalStock } from "../lib/stock-history";
+import { stockControlIdentity } from "../lib/stock-controls";
 import { ApprovalForm } from "./approval-form";
 import { Button } from "./ui/button";
 import { StockFollowUps } from "./stock-followups";
@@ -44,7 +44,7 @@ export function StockControls({db, organizationId, branchId, actorId, products, 
     return invalidate;
   },[online,load,revision,invalidate]);
   const label = (row: Row) => {
-    const product = historicalStock(products,row);
+    const product = stockControlIdentity(products,row);
     return `${product.name} · ${product.lot} (${product.baseUnit || "base units"})`;
   };
   async function save(action: string, body: Row, idField?: string) {
@@ -63,17 +63,17 @@ export function StockControls({db, organizationId, branchId, actorId, products, 
       {!online&&<p className="notice">Reconnect and refresh before acting. Previously loaded stock controls may have changed.</p>}
       <p>Keep these goods physically separate. Inspect them before release; expired goods cannot be released for sale.</p>
       {!data?.holds.length ? <p>No held goods loaded.</p> : <div className="table-wrap history-table stock-control-table" role="region" aria-label="Held stock" tabIndex={0}><table role="table"><thead><tr><th scope="col">Product / lot / reason</th><th scope="col" className="numeric">Still held</th><th scope="col">Outcome</th></tr></thead><tbody>
-        {data.holds.map(h => <tr key={String(h.id)}><td>{label(h)}<small>{String(h.reason)}</small></td><td className="numeric" data-label="Still held: ">{stockMeasurement(h.remaining,historicalStock(products,h).baseUnit||"base units")}</td><td>{owner ? <ApprovalForm action="Record held-goods outcome" label="Inspection / disposition reason" description="Release only goods verified saleable. Disposal or supplier return does not deduct saleable stock again." confirmLabel="Record outcome" disabled={disabled || !online} onConfirm={(reason,f) => execute(() => save("disposition_hold",{holdId:h.id,quantity:val(f,"quantity"),disposition:val(f,"disposition"),reason},"dispositionId"))}>
-          <MeasuredQuantity label="Quantity from held stock (base units)" entryLabel="Quantity from held stock" name="quantity" measurement={{baseUnit:historicalStock(products,h).baseUnit||"base units",unitName:historicalStock(products,h).baseUnit||"base units",factor:"1"}} positive max={String(h.remaining)}/>
+        {data.holds.map(h => <tr key={String(h.id)}><td>{label(h)}<small>{String(h.reason)}</small></td><td className="numeric" data-label="Still held: ">{stockMeasurement(h.remaining,stockControlIdentity(products,h).baseUnit||"base units")}</td><td>{owner ? <ApprovalForm action="Record held-goods outcome" label="Inspection / disposition reason" description="Release only goods verified saleable. Disposal or supplier return does not deduct saleable stock again." confirmLabel="Record outcome" disabled={disabled || !online || !stockControlIdentity(products,h).baseUnit} onConfirm={(reason,f) => execute(() => save("disposition_hold",{holdId:h.id,quantity:val(f,"quantity"),disposition:val(f,"disposition"),reason},"dispositionId"))}>
+          <MeasuredQuantity label="Quantity from held stock (base units)" entryLabel="Quantity from held stock" name="quantity" measurement={{baseUnit:stockControlIdentity(products,h).baseUnit||"base units",unitName:stockControlIdentity(products,h).baseUnit||"base units",factor:"1"}} positive max={String(h.remaining)}/>
           <label className="field"><span id={`held-outcome-${h.id}`}>Held-goods outcome</span><select name="disposition" aria-labelledby={`held-outcome-${h.id}`} defaultValue="dispose"><option value="dispose">Dispose / write off held goods</option><option value="supplier_return">Return held goods to supplier</option><option value="release">Release inspected goods for sale</option></select></label>
-        </ApprovalForm> : "Owner review required"}</td></tr>)}
+        </ApprovalForm> : "Owner review required"}{owner&&!stockControlIdentity(products,h).baseUnit&&<p>Measurement is unavailable. Refresh online before processing these goods.</p>}</td></tr>)}
       </tbody></table></div>}
       {data&&<><p>{data.holds.length} of {data.holdCount??data.holds.length} open held-goods records loaded, oldest first. {data.holdsNext?"More held goods are available.":"End of open held goods."} Refresh to check current balances.</p><Button variant="outline" disabled={disabled||!online||loading||!data.holdsNext} onClick={()=>void load("holds",data)}>Load more held goods</Button></>}
     </section>
     <section className="panel">
       <h2>Damage, spillage and other stock issues</h2>
       <p>Choose the actual measurement and check its recorded stock equivalent. Nothing changes saleable stock until the owner approves. Do not use this to erase an unexplained count difference.</p>
-      {!!data?.issues.length && <div className="table-wrap history-table stock-control-table" role="region" aria-label="Stock issues awaiting approval" tabIndex={0}><table role="table"><thead><tr><th scope="col">Issue</th><th scope="col" className="numeric">Quantity</th><th scope="col">Approval</th></tr></thead><tbody>{data.issues.map(s => <tr key={String(s.id)}><td>{label(s)}<small>{String(s.category)} · {String(s.disposition)} · {String(s.reason)}</small></td><td className="numeric" data-label="Quantity: ">{stockMeasurement(s.quantity,historicalStock(products,s).baseUnit||"base units")}</td><td>{owner && <ApprovalForm action="Approve stock issue" label="Approval notes" description="This deducts the recorded quantity from saleable stock and retains a separate movement. Held goods remain separately tracked." confirmLabel="Approve issue" disabled={disabled || !online} onConfirm={reason => execute(() => save("approve_stock_issue",{issueId:s.id,reason}))} />}</td></tr>)}</tbody></table></div>}
+      {!!data?.issues.length && <div className="table-wrap history-table stock-control-table" role="region" aria-label="Stock issues awaiting approval" tabIndex={0}><table role="table"><thead><tr><th scope="col">Issue</th><th scope="col" className="numeric">Quantity</th><th scope="col">Approval</th></tr></thead><tbody>{data.issues.map(s => <tr key={String(s.id)}><td>{label(s)}<small>{String(s.category)} · {String(s.disposition)} · {String(s.reason)}</small></td><td className="numeric" data-label="Quantity: ">{stockMeasurement(s.quantity,stockControlIdentity(products,s).baseUnit||"base units")}</td><td>{owner && <ApprovalForm action="Approve stock issue" label="Approval notes" description="This deducts the recorded quantity from saleable stock and retains a separate movement. Held goods remain separately tracked." confirmLabel="Approve issue" disabled={disabled || !online} onConfirm={reason => execute(() => save("approve_stock_issue",{issueId:s.id,reason}))} />}</td></tr>)}</tbody></table></div>}
       {data&&<><p>{data.issues.length} of {data.issueCount??data.issues.length} pending stock issues loaded, oldest first. {data.issuesNext?"More pending issues are available.":"End of pending stock issues."}</p><Button variant="outline" disabled={disabled||!online||loading||!data.issuesNext} onClick={()=>void load("issues",data)}>Load more stock issues</Button></>}
       <form className="form-grid" aria-label="Record stock issue" onSubmit={e => {
         e.preventDefault(); const form = e.currentTarget; const f = new FormData(form);

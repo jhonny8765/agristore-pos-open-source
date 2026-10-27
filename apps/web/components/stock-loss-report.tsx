@@ -7,7 +7,7 @@ import { command } from "../lib/api";
 import { onlineOperation } from "../lib/operations";
 import { stockMeasurement } from "../lib/stock-quantity";
 import { historyBounds } from "../lib/history";
-import { businessDay, lossCsv, lossValueCentavos, purchaseCentavos, reconciliationCsv, reconciliationQuantities, reportMoney, type CostHistoryRow, type LossReport, type LossRow } from "../lib/stock-loss";
+import { businessDay, lossCsv, lossValueCentavos, purchaseCentavos, reconciliationCsv, reconciliationQuantities, reportMoney, type CostHistoryRow, type LossReport, type LossRow, type PurchaseCostUnit } from "../lib/stock-loss";
 import { ApprovalForm } from "./approval-form";
 import { Button } from "./ui/button";
 
@@ -37,13 +37,13 @@ function CostHistory({ organizationId, row, asOf, online }: { organizationId: st
     {loading && <p role="status">Loading cost history…</p>}{error && <p role="alert" className="notice error">{error}</p>}
   </div>;
 }
-function CostEvidenceFields({product,row,hint}:{product:Product;row:LossRow;hint:string}){
- const [unitId,setUnitId]=useState(""),[cost,setCost]=useState("");const unit=product.units.find(u=>u.id===unitId);let preview="",error="";
+function CostEvidenceFields({units,row,hint}:{units:PurchaseCostUnit[];row:LossRow;hint:string}){
+ const [unitId,setUnitId]=useState(""),[cost,setCost]=useState("");const unit=units.find(u=>u.id===unitId);let preview="",error="";
  if(unit&&cost.trim())try{preview=reportMoney(lossValueCentavos(row.quantity,purchaseCentavos(cost),unit.factor));}catch(e){error=e instanceof Error?e.message:"Check the documented purchase cost.";}
  return <>
-  <label className="field"><span id={hint}>Purchase-cost unit</span><select name="unit" aria-labelledby={hint} required value={unitId} onChange={e=>{setUnitId(e.target.value);setCost("");}}><option value="">Choose the unit on your document</option>{product.units.map(u=><option key={u.id} value={u.id}>{u.name} · {u.factor} {product.baseUnit}</option>)}</select></label>
+  <label className="field"><span id={hint}>Purchase-cost unit</span><select name="unit" aria-labelledby={hint} required value={unitId} onChange={e=>{setUnitId(e.target.value);setCost("");}}><option value="">Choose the unit on your document</option>{units.map(u=><option key={u.id} value={u.id}>{u.name} · {u.factor} {row.base_unit}</option>)}</select></label>
   <label className="field"><span>Purchase cost per selected unit (₱)</span><input name="cost" inputMode="decimal" autoComplete="off" required value={cost} onChange={e=>setCost(e.target.value)}/></label>
-  {unit&&<p>Documented cost must be for one {unit.name}, equal to {new Decimal(unit.factor).toFixed()} {product.baseUnit}. Changing this unit clears the entered cost.</p>}
+  {unit&&<p>Documented cost must be for one {unit.name}, equal to {new Decimal(unit.factor).toFixed()} {row.base_unit}. Changing this unit clears the entered cost.</p>}
   {preview&&<p role="status">This removal at the entered purchase cost: {preview} for {stockMeasurement(row.quantity,row.base_unit)}. Check the source document, then save and review the confirmed report value.</p>}
   {error&&<p role="alert" className="quantity-error">{error}</p>}
   <label className="field"><span>Purchase-cost document reference</span><input name="reference" required minLength={3} maxLength={200}/></label>
@@ -114,6 +114,7 @@ export function StockLossReport({ db, organizationId, branchId, branchName, acto
         <p>Held goods, pending counts, unreceived transfers and supplier-document shortfalls are not automatically posted losses. Review them in Inventory. Transfer shortages are attributed to the dispatch branch; disposing held goods is recorded once at the branch holding them.</p>
         {data.rows.length ? <div className="table-wrap history-table loss-table" role="region" aria-label="Purchase-cost stock-loss rows" tabIndex={0}><table role="table"><thead><tr><th scope="col">Product / lot / source</th><th scope="col">Removed quantity</th><th scope="col">Documented value / evidence</th></tr></thead><tbody>{data.rows.map(row => {
           const product = products.find(p => p.id === row.product_id);
+          const units = row.purchase_units ?? product?.units ?? [];
           return <tr key={`${row.loss_key}:${row.evidence_id ?? "missing"}`}>
             <td><strong>{row.product_name}</strong><small>{row.branch_name} · Lot: {row.lot}</small><small>{row.category.replaceAll("_", " ")} · {stamp(row.recorded_at)}</small><p className="stock-evidence">{row.reason}</p><small>Source: {row.source_id} · Row: {row.loss_key}</small>{row.destination_branch_id && <small>Destination branch ID: {row.destination_branch_id}</small>}</td>
             <td className="numeric" data-label="Removed quantity: ">{stockMeasurement(row.quantity,row.base_unit)}</td>
@@ -122,9 +123,10 @@ export function StockLossReport({ db, organizationId, branchId, branchName, acto
               {row.zero_cost_confirmed && row.unit_cost_centavos === "0" && <p>Document confirms zero acquisition cost.</p>}
               <p className="stock-evidence">Document: {row.reference}<br />{row.cost_reason}</p><small>{row.recorded_name} · {stamp(row.cost_recorded_at!)}</small>
             </> : <p>Owner: verify the supplier or opening-stock document before recording cost.</p>}
-            {owner && product && <ApprovalForm action={row.evidence_id ? "Record corrected purchase cost" : "Record purchase cost"} label="Purchase-cost explanation" description="Enter the documented cost of ONE selected unit. Include allocated acquisition costs only when supported by your source. This changes the report valuation, not stock or the original sale." confirmLabel="Save cost evidence" disabled={blocked} onConfirm={(reason, fields) => execute(() => recordCost(row, reason, fields))}>
-              <CostEvidenceFields product={product} row={row} hint={`${id}-unit-${row.loss_key}`}/>
+            {owner && !!units.length && <ApprovalForm action={row.evidence_id ? "Record corrected purchase cost" : "Record purchase cost"} label="Purchase-cost explanation" description="Enter the documented cost of ONE selected unit. Include allocated acquisition costs only when supported by your source. This changes the report valuation, not stock or the original sale." confirmLabel="Save cost evidence" disabled={blocked} onConfirm={(reason, fields) => execute(() => recordCost(row, reason, fields))}>
+              <CostEvidenceFields units={units} row={row} hint={`${id}-unit-${row.loss_key}`}/>
             </ApprovalForm>}
+            {owner&&!units.length&&<p>Purchase-unit details are unavailable. Refresh online before recording cost; no cost has been assumed.</p>}
             <CostHistory organizationId={organizationId} row={row} asOf={data.asOf} online={online} />
             </td>
           </tr>;

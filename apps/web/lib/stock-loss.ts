@@ -1,6 +1,7 @@
 import Decimal from "decimal.js";
 import { historyCsv, type HistoryColumn } from "./history";
 const CostDecimal = Decimal.clone({ precision: 80 });
+export interface PurchaseCostUnit { id:string; name:string; factor:string }
 export interface LossRow {
   loss_key: string; branch_id: string; branch_name: string; product_id: string; product_name: string;
   batch_id: string | null; lot: string; base_unit: string; recorded_at: string; quantity: string;
@@ -8,6 +9,7 @@ export interface LossRow {
   evidence_id: string | null; unit_name: string | null; unit_factor: string | null; unit_cost_centavos: string | null;
   value_centavos: string | null; reference: string | null; cost_reason: string | null; recorded_name: string | null;
   cost_recorded_at: string | null; zero_cost_confirmed: boolean | null;
+  purchase_units?:PurchaseCostUnit[];
 }
 export interface ReconciliationRow {
   branch_id: string; branch_name: string; product_id: string; product_name: string; batch_id: string | null; lot: string; base_unit: string;

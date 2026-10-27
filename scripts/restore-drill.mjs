@@ -253,6 +253,7 @@ try {
   assert.equal(controls.holdCount,controls.holds.length);
   assert.equal(controls.issueCount,controls.issues.length);
   assert.equal(controls.holdsNext,null);assert.equal(controls.issuesNext,null);
+  assert.equal(controls.holds[0].base_unit,"kg");assert.equal(typeof controls.holds[0].product_name,"string");
   const destination = command("snapshot",{...ctx(6),transactionIds:[]},database);
   assert.equal(destination.stocks[0].quantity,"2.250000");
   assert.equal(sql(`select (quantity-received_quantity-held_quantity-lost_quantity)::text from public.stock_transfers where id='${id(12)}';`,database).trim(),"0.750000");
@@ -296,6 +297,7 @@ try {
   command('disposition_hold',{...ctx(140),holdId:measuredDamageHold,dispositionId:id(149),quantity:'0.025',disposition:'supplier_return',reason:'TEST remaining 25 ml physically returned after restoration'},database);
   command('record_loss_cost',{...measuredDamageCosts[0],lossKey:'held:'+id(149),costEvidenceId:id(150),unitCostCentavos:'2500',reference:'TEST measured supplier return cost'},database);
   const measuredDamageReport=command('stock_loss_report',{...ctx(140),filter:'all'},database);assert.equal(measuredDamageReport.totals.documentedLossCentavos,'1000');assert.equal(measuredDamageReport.totals.documentedOtherCentavos,'125');
+  assert.equal(measuredDamageReport.rows.find(r=>r.product_id===id(95)).purchase_units.find(u=>u.id===id(97)).factor,'0.500000');
   assert.equal(Number(sql(`select quantity from public.branch_inventory where branch_id='${id(140)}' and product_id='${id(95)}';`,database).trim()),9.85);
   assert.equal(Number(sql(`select remaining from public.stock_holds where id='${measuredDamageHold}';`,database).trim()),0);
   assert.throws(()=>sql(`update public.sale_refund_corrections set amount=1 where id='${id(85)}';`,database),/History is immutable/);
