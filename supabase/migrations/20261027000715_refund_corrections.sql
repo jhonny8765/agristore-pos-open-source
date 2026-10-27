@@ -42,7 +42,7 @@ end$patch$;
 
 -- One representation of full and partial evidence, always taken from the original sale.
 create function app_private.refund_source(org uuid,branch uuid,ident uuid,kind text) returns jsonb language plpgsql stable set search_path='' as $$
-declare s public.sales;e public.stock_control_events;v_sale uuid;v_shift uuid;v_actor uuid;v_amount bigint;v_reference text;v_reason text;v_at timestamptz;v_complete boolean;v_lines jsonb:='[]'::jsonb;v_item jsonb;r jsonb;v_line record;t numeric;a numeric;h numeric;f numeric;i integer;
+declare s public.sales;e public.stock_control_events;v_sale uuid;v_shift uuid;v_actor uuid;v_amount bigint;v_reference text;v_reason text;v_at timestamptz;v_complete boolean;v_lines jsonb:='[]'::jsonb;v_item jsonb;r jsonb;v_line record;t numeric;a numeric;h numeric;f numeric;
 begin
  if kind='partial' then
   select x.sale_id,x.shift_id,x.created_by,x.amount,x.reference,x.reason,x.created_at into v_sale,v_shift,v_actor,v_amount,v_reference,v_reason,v_at from public.sale_partial_refunds x where x.organization_id=org and x.branch_id=branch and x.id=ident;
