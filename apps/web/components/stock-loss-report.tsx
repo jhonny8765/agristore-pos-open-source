@@ -79,6 +79,7 @@ export function StockLossReport({ db, organizationId, branchId, branchName, acto
   useEffect(() => { if (online) void load(); else setLoading(false); return invalidate; }, [online, load, revision, invalidate]);
   const blocked = disabled || loading || !online;
   const scope = data?.allBranches ? "All branches" : branchName;
+  const filtersNotLoaded = data && ((filters.fromDate || null) !== (data.fromDate || null) || (filters.throughDate || null) !== (data.throughDate || null) || filters.filter !== data.filter || filters.allBranches !== data.allBranches);
   async function recordCost(row: LossRow, reason: string, fields: FormData) {
     await onlineOperation(db, actorId, "record_loss_cost", { organizationId, branchId: row.branch_id, lossKey: row.loss_key, expectedCostId: row.evidence_id,
       unitId: String(fields.get("unit") ?? ""), unitCostCentavos: purchaseCentavos(String(fields.get("cost") ?? "")), zeroCostConfirmed: fields.get("zero") === "on",
@@ -99,6 +100,7 @@ export function StockLossReport({ db, organizationId, branchId, branchName, acto
       </form>
       {feedback && <p className="notice success" role="status">{feedback}</p>}
       {error && <p className="notice error" role="alert">{error} Previously loaded report rows are retained. Refresh online to retry.</p>}
+      {filtersNotLoaded&&!loading&&<p className="notice" role="status">Requested filters are not loaded. Rows, totals and exports below still use the displayed report snapshot. Apply the filters again to retry.</p>}
       {!online && <p className="notice">Reconnect for current loss and cost records. Loaded rows retain their original snapshot time.</p>}
       {loading && <p role="status">Loading stock-loss report…</p>}
       {data ? <>
