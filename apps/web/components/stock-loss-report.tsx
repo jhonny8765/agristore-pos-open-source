@@ -44,7 +44,7 @@ function CostEvidenceFields({product,row,hint}:{product:Product;row:LossRow;hint
   <label className="field"><span id={hint}>Purchase-cost unit</span><select name="unit" aria-labelledby={hint} required value={unitId} onChange={e=>{setUnitId(e.target.value);setCost("");}}><option value="">Choose the unit on your document</option>{product.units.map(u=><option key={u.id} value={u.id}>{u.name} · {u.factor} {product.baseUnit}</option>)}</select></label>
   <label className="field"><span>Purchase cost per selected unit (₱)</span><input name="cost" inputMode="decimal" autoComplete="off" required value={cost} onChange={e=>setCost(e.target.value)}/></label>
   {unit&&<p>Documented cost must be for one {unit.name}, equal to {new Decimal(unit.factor).toFixed()} {product.baseUnit}. Changing this unit clears the entered cost.</p>}
-  {preview&&<p role="status">This removal at the entered purchase cost: {preview} for {stockMeasurement(row.quantity,row.base_unit)}. Review the source document; saving confirms the server valuation.</p>}
+  {preview&&<p role="status">This removal at the entered purchase cost: {preview} for {stockMeasurement(row.quantity,row.base_unit)}. Check the source document, then save and review the confirmed report value.</p>}
   {error&&<p role="alert" className="quantity-error">{error}</p>}
   <label className="field"><span>Purchase-cost document reference</span><input name="reference" required minLength={3} maxLength={200}/></label>
   <label className="checkbox"><input name="zero" type="checkbox"/>Document confirms zero acquisition cost</label>
@@ -100,7 +100,7 @@ export function StockLossReport({ db, organizationId, branchId, branchName, acto
       {loading && <p role="status">Loading stock-loss report…</p>}
       {data ? <>
         <p>{scope} · Stock-book recorded dates, Asia/Manila: {data.fromDate || "earliest"} through {data.throughDate || "latest"}. Snapshot: {stamp(data.asOf)}.</p>
-        <p>Category shown: {data.filter.replaceAll("_", " ")}. Cost basis: documented purchase cost per selected unit, converted to base quantity and rounded once per row. Liquid loss rows also show the exact ml equivalent. Valuation uses canonical stock quantity and the documented cost of one selected purchase unit; it is not rounded per ml. This is an operational report, not a full inventory-cost accounting system.</p>
+        <p>Category shown: {data.filter.replaceAll("_", " ")}. Cost basis: documented purchase cost per selected unit, converted to base quantity and rounded once per row. Liquid quantities also show ml. Use the documented cost of one selected purchase unit; each complete removal is valued and rounded once. This is an operational report, not a full inventory-cost accounting system.</p>
         <div className="loss-report-totals" aria-label="Full-range loss valuation totals">
           <p><strong>Documented-cost loss subtotal: {reportMoney(data.totals.documentedLossCentavos)}</strong><br />{data.totals.lossRows} posted loss rows in the complete range.</p>
           <p className={data.totals.missingLossCosts ? "quantity-error" : ""}>{data.totals.missingLossCosts ? `Incomplete valuation: ${data.totals.missingLossCosts} loss rows have no documented purchase cost. They are not valued at zero.` : "Every posted loss row in this range has documented cost evidence."}</p>
