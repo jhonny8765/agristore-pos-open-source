@@ -144,3 +144,15 @@ At **₱25 per 500 ml container**, a **125 ml** disposal is **₱6.25**. At **�
 Money is rounded once for each complete loss row, then row values are added. Do not round a per-ml price first. At a test cost of **₱0.03 per 500 ml**, a 249 ml row is one centavo and a 250 ml row is two centavos. Both quantities stay recorded exactly even when a very small valued row rounds to zero centavos. These are test examples, not your store's actual costs.
 
 If a save loses its response, use **Sync center → Retry original request**. Recovery exports retain the exact base quantity and permanent request ID. Do not enter the same disposal or issue again to replace an uncertain save. Assign and investigate unresolved differences; the report cannot establish why goods went missing.
+
+### Find every held record and pending issue
+
+1. Open **Inventory** and check the loaded count under **Held goods** and **Damage, spillage and other stock issues**. The first page shows up to fifty records, oldest first.
+2. Use **Load more held goods** or **Load more stock issues** to reach additional records. Loading one list keeps the other list available. An end message and disabled button indicate that the matching list is fully loaded.
+3. If a page fails, retain the loaded records and retry the same load button online. A page read never changes stock, approves damage or records a loss.
+4. Before acting, refresh and check the physical goods, correct product/lot and remaining quantity. Another employee may have processed a loaded record. The server checks the current quantity and authority again on save.
+5. After a successful approval or held outcome, the list refreshes from its first page. Use **Load more** again when needed; previously saved evidence remains retained.
+
+### Read a report when filters fail to load
+
+The snapshot, date range, branch scope and category printed below the report filters describe the loaded rows, totals and CSV. If a requested filter fails, those previous rows are kept and a notice identifies the retained snapshot. Loading more rows continues that same snapshot; it cannot add supplier returns to a loss-only page. Choose **Apply loss-report filters** again online to load the requested report. The notice clears when that report loads. CSV still exports only the loaded rows; load every matching page before using it as a complete row list.
