@@ -1,0 +1,24 @@
+name: POS availability monitor
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '7,22,37,52 * * * *'
+permissions:
+  contents: read
+concurrency:
+  group: pos-availability-monitor
+  cancel-in-progress: false
+jobs:
+  availability:
+    if: vars.POS_MONITOR_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Check website and database without business credentials
+        env:
+          POS_MONITOR_URL: ${{ vars.POS_MONITOR_URL }}
+        run: node scripts/service-monitor.mjs

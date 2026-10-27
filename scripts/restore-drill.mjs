@@ -1,6 +1,11 @@
 import { execFileSync } from "node:child_process";
 import assert from "node:assert/strict";
 import {retainedTables as tables,fingerprintSQL} from './recovery-fingerprints.mjs';
+import {protectBackup,backupHash} from './backup-archive.mjs';
+import {randomBytes} from 'node:crypto';
+import {mkdtemp,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import path from 'node:path';
 if (process.env.CI !== "true" || process.platform !== "linux")
   throw new Error(
     "This drill runs only on the disposable CI Supabase database.",
@@ -177,6 +182,22 @@ run([
   "--format=custom",
   "--file=/tmp/agristore-drill.dump",
 ]);
+const archiveDirectory=await mkdtemp(path.join(tmpdir(),'agristore-encrypted-drill-'));
+try{
+ const source=path.join(archiveDirectory,'original.dump'),archive=path.join(archiveDirectory,'protected.agb'),restored=path.join(archiveDirectory,'verified.dump');
+ execFileSync('docker',['cp',`${container}:/tmp/agristore-drill.dump`,source]);
+ const key=randomBytes(32);
+ await protectBackup(source,archive,key);
+ await assert.rejects(()=>protectBackup(archive,path.join(archiveDirectory,'wrong-key.dump'),randomBytes(32),true));
+ await protectBackup(archive,restored,key,true);
+ assert.equal(await backupHash(source),await backupHash(restored),'Authenticated decryption must reproduce the complete original pg_dump');
+ execFileSync('docker',['cp',restored,`${container}:/tmp/agristore-verified.dump`]);
+ console.log('Encrypted backup round trip passed; only the authenticated decrypted pg_dump is used for the restore.');
+}finally{
+ const resolved=path.resolve(archiveDirectory);
+ if(path.dirname(resolved)!==path.resolve(tmpdir())||!path.basename(resolved).startsWith('agristore-encrypted-drill-'))throw new Error('Refusing cleanup outside the created encrypted drill directory.');
+ await rm(resolved,{recursive:true,force:true});
+}
 run(["createdb", "-U", "postgres", "--template=template0", database]);
 try {
   // Keep the built-in public schema supplied by template0. Restore the complete
@@ -188,7 +209,7 @@ try {
     "--dbname=" + database,
     "--no-owner",
     "--exit-on-error",
-    "/tmp/agristore-drill.dump",
+    "/tmp/agristore-verified.dump",
   ]);
   assert.deepEqual(fingerprints(database),original,"Every retained fixture row must survive dump/restore unchanged");
   const restored = command("snapshot",{...ctx(),transactionIds:[id(9)]},database);

@@ -1,0 +1,15 @@
+import {describe,it,expect,afterEach} from "vitest";
+import {randomBytes} from "node:crypto";
+import {mkdtemp,writeFile,readFile,readdir,rm} from "node:fs/promises";
+import {tmpdir} from "node:os";
+import path from "node:path";
+import {protectBackup,backupHash} from "../../scripts/backup-archive.mjs";
+const directories:string[]=[];
+async function fixture(){const dir=await mkdtemp(path.join(tmpdir(),"agristore-archive-test-"));directories.push(dir);const source=path.join(dir,"original.dump"),archive=path.join(dir,"protected.agb"),restored=path.join(dir,"restored.dump"),key=randomBytes(32);await writeFile(source,Buffer.concat([Buffer.from("TEST PRIVATE backup contents"),randomBytes(1024*1024)]));return {dir,source,archive,restored,key};}
+afterEach(async()=>{for(const directory of directories.splice(0)){const target=path.resolve(directory);if(path.dirname(target)!==path.resolve(tmpdir())||!path.basename(target).startsWith("agristore-archive-test-"))throw new Error("Refusing cleanup outside created archive test directory");await rm(target,{recursive:true,force:true});}});
+describe("authenticated encrypted backup archive",()=>{
+ it("restores exact dump bytes and a recorded digest without exposing plaintext",async()=>{const f=await fixture();const result=await protectBackup(f.source,f.archive,f.key);expect(result.sha256).toBe(await backupHash(f.archive));expect((await readFile(f.archive)).includes(Buffer.from("TEST PRIVATE"))).toBe(false);await protectBackup(f.archive,f.restored,f.key,true);expect(await readFile(f.restored)).toEqual(await readFile(f.source));},20_000);
+ it.each(["wrong-key","corrupt-data","corrupt-tag","truncated"])("rejects %s without publishing any restored plaintext",async(fault)=>{const f=await fixture();await protectBackup(f.source,f.archive,f.key);let key=f.key;const bytes=await readFile(f.archive);if(fault==="wrong-key")key=randomBytes(32);else if(fault==="truncated")await writeFile(f.archive,bytes.subarray(0,25));else{bytes[fault==="corrupt-tag"?bytes.length-1:100]^=1;await writeFile(f.archive,bytes);}await expect(protectBackup(f.archive,f.restored,key,true)).rejects.toThrow();expect(await readdir(f.dir)).not.toContain("restored.dump");expect((await readdir(f.dir)).some(name=>name.includes(".partial-"))).toBe(false);},20_000);
+ it("never overwrites an existing backup or restored file",async()=>{const f=await fixture();await writeFile(f.archive,"KEEP ORIGINAL");await expect(protectBackup(f.source,f.archive,f.key)).rejects.toThrow();expect(await readFile(f.archive,"utf8")).toBe("KEEP ORIGINAL");expect((await readdir(f.dir)).some(name=>name.includes(".partial-"))).toBe(false);},20_000);
+ it("rejects empty input, a short key and a same-file destination",async()=>{const f=await fixture();await expect(protectBackup(f.source,f.archive,randomBytes(8))).rejects.toThrow();await expect(protectBackup(f.source,f.source,f.key)).rejects.toThrow();await writeFile(f.source,"");await expect(protectBackup(f.source,f.archive,f.key)).rejects.toThrow();},20_000);
+});

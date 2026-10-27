@@ -1,0 +1,18 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+set local search_path=public,extensions;
+select plan(8);
+select is((select prosecdef from pg_proc where oid='public.agri_service_health()'::regprocedure),false,'Probe has no elevated execution privileges');
+select ok(has_function_privilege('anon','public.agri_service_health()','EXECUTE'),'Anonymous availability probe is permitted');
+select ok(has_function_privilege('authenticated','public.agri_service_health()','EXECUTE'),'Signed-in availability probe is permitted');
+select ok(not has_function_privilege('anon','public.agri_command(text,jsonb)','EXECUTE'),'Probe grants no anonymous business command access');
+set local role anon;
+select is(public.agri_service_health(),true,'Anonymous probe reports command availability');
+select is(pg_typeof(public.agri_service_health())::text,'boolean','Public probe returns no private record contents');
+reset role;
+set local role authenticated;
+select is(public.agri_service_health(),true,'Probe needs no organization or cashier identity');
+reset role;
+select is((select provolatile::text from pg_proc where oid='public.agri_service_health()'::regprocedure),'s','Probe is stable and read-only');
+select * from finish();
+rollback;
