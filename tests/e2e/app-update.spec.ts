@@ -239,3 +239,31 @@ test("a waiting update preserves the exact pending sale across offline browser-p
     await rm(resolved, { recursive: true, force: true });
   }
 });
+
+
+test("republishing an earlier shell revision preserves pending receipts across offline browser restart",async()=>{
+ const app=await versionedApp(),directory=await mkdtemp(path.join(tmpdir(),"agri-rollback-"));
+ let context=await chromium.launchPersistentContext(directory,{headless:true});
+ try{
+  let page=context.pages()[0];await openPractice(page,app.origin);app.publish("two");
+  await page.getByRole("button",{name:"Settings",exact:true}).click();await page.getByRole("button",{name:"Check for app update",exact:true}).click();
+  await expect(buildMarker(page)).toHaveAttribute("content","two",{timeout:25_000});
+  await context.setOffline(true);
+  for(let n=0;n<2;n++){await page.getByRole("button",{name:"Add Grower feeds"}).click();await page.getByLabel("Cash received",{exact:true}).fill("2000");await page.getByRole("button",{name:"Complete cash sale",exact:true}).click();await expect(page.getByRole("heading",{name:"Sale saved.",exact:true})).toBeVisible();}
+  const before=await completedRecords(page);expect(before).toHaveLength(2);
+  // This is a real Workbox/cache downgrade, using the current compatible JS
+  // and IndexedDB schema. It does not certify arbitrary historical DB/code.
+  app.publish("one");await context.setOffline(false);
+  await page.evaluate(async()=>{await(await navigator.serviceWorker.getRegistration())!.update();});
+  await expect.poll(()=>page.evaluate(async()=>!!(await navigator.serviceWorker.getRegistration())?.waiting)).toBe(true);
+  await page.getByRole("button",{name:"Settings",exact:true}).click();await expect(page.getByRole("button",{name:"Check for app update",exact:true})).toBeDisabled();
+  await expect(buildMarker(page)).toHaveAttribute("content","two");await context.close();
+  context=await chromium.launchPersistentContext(directory,{headless:true});await context.setOffline(true);page=context.pages()[0];await page.goto(app.origin);
+  await expect(buildMarker(page)).toHaveAttribute("content","one");await expect(page.getByRole("button",{name:"Add Grower feeds"})).toBeEnabled();expect(await completedRecords(page)).toEqual(before);
+  await page.getByRole("button",{name:/^Sync center/}).click();await expect(page.locator("tbody tr")).toHaveCount(2);
+ }finally{
+  await context.close();await app.close();const resolved=path.resolve(directory);
+  if(path.dirname(resolved)!==path.resolve(tmpdir())||!path.basename(resolved).startsWith("agri-rollback-"))throw new Error("Refusing cleanup outside the created rollback test profile.");
+  await rm(resolved,{recursive:true,force:true});
+ }
+});

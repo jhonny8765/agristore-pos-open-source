@@ -6,16 +6,24 @@ export interface OperatingScope { organizationId:string; branchId:string; actorI
 export interface LocalOperatingStatus {
   sales:Partial<Record<SyncState,number>>; operations:number; otherRecords:number;
   productCount:number; snapshotAt?:string; lastSync?:string; lease?:Lease;
+  oldestSaleAt?:number; invalidSaleTimes?:number;
 }
 /** Aggregate every unresolved record, independent of the recent-receipt page.
  * Return counts only; another employee's request contents stay private. */
 export async function readOperatingStatus(db:PosDatabase,scope:OperatingScope):Promise<LocalOperatingStatus>{
  return db.transaction("r",[db.sales,db.settings,db.products],async()=>{
-  const sales:LocalOperatingStatus["sales"]={};let operations=0,otherRecords=0;
+  const sales:LocalOperatingStatus["sales"]={};let operations=0,otherRecords=0,oldestSaleAt:number|undefined,invalidSaleTimes=0;
   const visible=(org:unknown,branch:unknown,actor:unknown)=>org===scope.organizationId&&(!branch||branch===scope.branchId)&&(scope.role==="owner"||actor===scope.actorId);
-  await db.sales.where("status").anyOf(unresolvedStates).each(s=>{if(visible(s.payload.organizationId,s.payload.branchId,s.payload.cashierId))sales[s.status]=(sales[s.status]??0)+1;else otherRecords++;});
+  await db.sales.where("status").anyOf(unresolvedStates).each(s=>{
+   if(visible(s.payload.organizationId,s.payload.branchId,s.payload.cashierId)){
+    sales[s.status]=(sales[s.status]??0)+1;
+    // Retries change updatedAt. Age must follow the original saved purchase.
+    const savedAt=Date.parse(s.payload.occurredAt);
+    if(Number.isFinite(savedAt))oldestSaleAt=oldestSaleAt===undefined?savedAt:Math.min(oldestSaleAt,savedAt);else invalidSaleTimes++;
+   }else otherRecords++;
+  });
   await db.settings.where("key").startsWith("operation:").each(row=>{const op=row.value as PendingOperation;if(visible(op.data.organizationId,op.data.branchId,op.actorId))operations++;else otherRecords++;});
-  return {sales,operations,otherRecords,productCount:await db.products.count(),snapshotAt:await setting<string>(db,"snapshotAsOf"),lastSync:await setting<string>(db,"lastSync"),lease:await setting<Lease>(db,"lease")};
+  return {sales,operations,otherRecords,oldestSaleAt,invalidSaleTimes,productCount:await db.products.count(),snapshotAt:await setting<string>(db,"snapshotAsOf"),lastSync:await setting<string>(db,"lastSync"),lease:await setting<Lease>(db,"lease")};
  });
 }
 export interface BrowserStorageStatus { persistent?:boolean; usage?:number; quota?:number }
@@ -25,6 +33,11 @@ export function operatingChecks(input:{scope:OperatingScope;local:LocalOperating
  const add=(id:string,title:string,state:OperatingCheck["state"],detail:string)=>result.push({id,title,state,detail});
  add("connection","Connection","Information",online?"This browser reports a connection. Only a successful server response confirms store access; a Wi-Fi icon alone does not.":"Offline: continue only the same authorized cashier shift. New sign-ins, shift opening/closure, refunds and stock changes require connectivity.");
  const unresolved=Object.values(local.sales).reduce((sum,n)=>sum+(n??0),0);
+ if(unresolved){
+  const age=local.oldestSaleAt===undefined?undefined:Math.floor((now-local.oldestSaleAt)/60_000);
+  const clockIssue=!!local.invalidSaleTimes||age===undefined||!Number.isFinite(age)||local.oldestSaleAt!>now+60_000;
+  add("queue-age","Time waiting for confirmation",clockIssue?"Review":online&&age!>=15?"Action needed":"Review",clockIssue?"The age of one or more saved sales cannot be verified against this PC's clock. Preserve the records, check Windows automatic time and ask the maintainer to investigate. Do not change time to extend a shift.":`The oldest unconfirmed sale was saved ${Math.max(0,age!)} minutes ago. ${online&&age!>=15?"This browser reports a connection, but this sale has waited at least 15 minutes. Open Sync center, check access and server availability, and contact the maintainer if the original record cannot be confirmed.":online?"Check Sync center for confirmation of the original records.":"Reconnect when available and confirm the original records; an intentional outage can leave sales waiting."} Do not repeat the purchase or clear site data.`);
+ }
  add("queue","Saved sales",!scope.branchId||local.sales.authentication_required||local.sales.review_required?"Action needed":unresolved?"Review":"Check passed",!scope.branchId?"The downloaded branch is not identified. Reconnect before reviewing saved sales; an empty view does not establish an empty queue. Preserve this profile and do not repeat completed purchases.":unresolved?`${unresolved} unconfirmed sales in your permitted branch view: ${local.sales.authentication_required??0} need sign-in, ${local.sales.review_required??0} need owner review, ${local.sales.retryable??0} need retry; others are pending or sending. Open Sync center and resolve the original records. Do not enter them again.`:"No unconfirmed sales in your permitted branch view. This does not prove physical cash or stock reconciles.");
  add("operations","Unconfirmed stock / owner requests",!scope.branchId||local.operations?"Action needed":"Check passed",!scope.branchId?"Reconnect to identify the saved branch before reviewing stock requests. Original requests remain on this PC.":local.operations?`${local.operations} original requests need confirmation in Sync center. Sign in as the employee who started each request and retry its original ID. Keep recovery files private.`:"No unconfirmed requests in your permitted branch view.");
  if(local.otherRecords)add("other","Other records on this PC","Action needed",`${local.otherRecords} unresolved records belong to another branch, business or employee view. Ask the owner to recover them using the original account. Do not clear site data or reinstall to remove them.`);
