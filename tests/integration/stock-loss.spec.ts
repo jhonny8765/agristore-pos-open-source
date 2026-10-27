@@ -52,7 +52,12 @@ test("purchase-cost reporting values fractional losses, preserves corrections an
   }
   await page.getByRole("button", { name: "Save cost evidence", exact: true }).click();
   await expect(rows).toContainText("₱6.25"); await expect(page.getByText("Documented-cost loss subtotal: ₱6.25", { exact: true })).toBeVisible();
-  await fillCost(page, a.sackId, true, "1300"); await page.getByRole("button", { name: "Save cost evidence", exact: true }).click();
+  await fillCost(page, a.sackId, true, "1300");
+  let committed=false,release!:()=>void;const delayedResponse=new Promise<void>(resolve=>{release=resolve;});
+  await page.route("**/rest/v1/rpc/agri_command",async route=>{if(route.request().postDataJSON().action==="record_loss_cost"){const response=await route.fetch();expect(response.ok()).toBe(true);committed=true;await delayedResponse;await route.fulfill({response});}else await route.continue();});
+  await page.getByRole("button", { name: "Save cost evidence", exact: true }).click();await expect.poll(()=>committed).toBe(true);
+  await expect(page.getByRole("button",{name:"View purchase-cost history",exact:true})).toBeDisabled();release();
+  await expect(page.getByRole("button",{name:"Save cost evidence",exact:true})).toHaveCount(0);
   await expect(rows).toContainText("₱6.50");
   await page.getByRole("button", { name: "View purchase-cost history", exact: true }).click();
   await expect(rows).toContainText("₱1,250.00 / Sack"); await expect(rows).toContainText("₱1,300.00 / Sack"); await expect(rows).toContainText("Version 2");

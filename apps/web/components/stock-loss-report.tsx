@@ -17,7 +17,7 @@ function downloadCsv(name: string, content: string) {
   const anchor = document.createElement("a"); anchor.href = url; anchor.download = name; anchor.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-function CostHistory({ organizationId, row, asOf, online }: { organizationId: string; row: LossRow; asOf: string; online: boolean }) {
+function CostHistory({ organizationId, row, asOf, online, disabled }: { organizationId: string; row: LossRow; asOf: string; online: boolean; disabled:boolean }) {
   const [history, setHistory] = useState<CostHistoryRow[]>(), [next, setNext] = useState<{ revision: number } | null>(null), [error, setError] = useState(""), [loading, setLoading] = useState(false);
   async function load(more = false) {
     setLoading(true);
@@ -28,11 +28,11 @@ function CostHistory({ organizationId, row, asOf, online }: { organizationId: st
     finally { setLoading(false); }
   }
   return <div className="loss-cost-history">
-    {!history ? <Button size="sm" variant="outline" disabled={!online || loading} onClick={() => void load()}>View purchase-cost history</Button> : <>
+    {!history ? <Button size="sm" variant="outline" disabled={disabled || !online || loading} onClick={() => void load()}>View purchase-cost history</Button> : <>
       <p>Recorded cost versions at this report snapshot:</p>
       <ol>{history.map(item => <li key={item.id}><strong>{reportMoney(item.unit_cost_centavos)} / {item.unit_name}</strong> · {item.unit_factor} base units per unit<br />{item.reference} · {item.reason}<br />{item.recorded_name} · {stamp(item.created_at)} · Version {item.revision}</li>)}</ol>
       {!history.length && <p>No documented cost has been recorded.</p>}
-      {next && <Button size="sm" variant="outline" disabled={!online || loading} onClick={() => void load(true)}>Load earlier cost evidence</Button>}
+      {next && <Button size="sm" variant="outline" disabled={disabled || !online || loading} onClick={() => void load(true)}>Load earlier cost evidence</Button>}
     </>}
     {loading && <p role="status">Loading cost history…</p>}{error && <p role="alert" className="notice error">{error}</p>}
   </div>;
@@ -127,7 +127,7 @@ export function StockLossReport({ db, organizationId, branchId, branchName, acto
               <CostEvidenceFields units={units} row={row} hint={`${id}-unit-${row.loss_key}`}/>
             </ApprovalForm>}
             {owner&&!units.length&&<p>Purchase-unit details are unavailable. Refresh online before recording cost; no cost has been assumed.</p>}
-            <CostHistory organizationId={organizationId} row={row} asOf={data.asOf} online={online} />
+            <CostHistory organizationId={organizationId} row={row} asOf={data.asOf} online={online} disabled={blocked} />
             </td>
           </tr>;
         })}</tbody></table></div> : <p>No posted removals match this report. This does not prove that physical stock has no unrecorded shortage.</p>}
