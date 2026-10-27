@@ -201,7 +201,8 @@ try {
   assert.equal(Number(sql(`select quantity from public.branch_inventory where branch_id='${id(91)}' and product_id='${id(95)}';`,database).trim()),0.25);
   assert.equal(Number(sql(`select quantity-received_quantity-held_quantity-lost_quantity from public.stock_transfers where id='${id(106)}';`,database).trim()),0.025);
   assert.equal(command('count_workspace',ctx(91),database).rows[0].counted,'0.245000');
-  for(const [action,body] of [['record_sale',measuredRefundSale],['partial_refund_sale',measuredRefundRequest],['correct_refund',measuredRefundCorrection],['partial_refund_sale',measuredRefundReplacement],['reverse_delivery',measuredReversal],['inspect_delivery',measuredCorrected]])assert.equal(command(action,body,database).duplicate,true);
+  assert.equal(command('record_sale',measuredRefundSale,database).status,'duplicate');
+  for(const [action,body] of [['partial_refund_sale',measuredRefundRequest],['correct_refund',measuredRefundCorrection],['partial_refund_sale',measuredRefundReplacement],['reverse_delivery',measuredReversal],['inspect_delivery',measuredCorrected]])assert.equal(command(action,body,database).duplicate,true);
   assert.equal(command('partial_refund_plan',{...ctx(120),saleId:id(123)},database).remainingCash,5362);
   assert.equal(Number(sql(`select expected_cash from public.cashier_shifts where id='${measuredRefundShift.shiftId}';`,database).trim()),15362);
   assert.equal(Number(sql(`select quantity from public.branch_inventory where branch_id='${id(120)}' and product_id='${id(95)}';`,database).trim()),9.5);
