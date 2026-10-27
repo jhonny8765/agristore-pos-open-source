@@ -281,7 +281,7 @@ test("transfers and count approvals identify separate lots, base quantities and 
     const batchId = batches.data!.find((batch) => batch.lot === lot.lot)!.id;
     await page.getByLabel("Product / batch").selectOption(`${productId}:${batchId}`);
     await page.getByRole("combobox", { name: "Destination branch", exact: true }).selectOption(destination);
-    await page.getByLabel("Quantity in base units (kg / liter / piece)", { exact: true }).fill(lot.transfer);
+    await page.getByLabel("Quantity in base units (kg / liter / meter / piece)", { exact: true }).fill(lot.transfer);
     await page.getByRole("button", { name: "Dispatch stock", exact: true }).click();
     const row = page.locator('.history-table[data-kind="transfers"] tbody tr').filter({ hasText: `Lot ${lot.lot}` });
     await expect(row).toContainText(`Expiry: ${lot.expiresOn}`);
@@ -1181,12 +1181,12 @@ test("owner approvals work without browser dialogs, stock refreshes without a sh
     .getByRole("combobox", { name: "Destination branch", exact: true })
     .selectOption(a.branchId);
   await page
-    .getByLabel("Quantity in base units (kg / liter / piece)", { exact: true })
+    .getByLabel("Quantity in base units (kg / liter / meter / piece)", { exact: true })
     .fill("1");
   await page
     .getByRole("button", { name: "Dispatch stock", exact: true })
     .click();
-  await expect(page.getByLabel("Quantity in base units (kg / liter / piece)", { exact: true })).toHaveValue("");
+  await expect(page.getByLabel("Quantity in base units (kg / liter / meter / piece)", { exact: true })).toHaveValue("");
   await expect(page.getByText("in transit", { exact: true })).toBeVisible();
   await page
     .getByRole("combobox", { name: "Current branch", exact: true })
