@@ -60,3 +60,11 @@ export function reconciliationCsv(report: LossReport, scope: string) {
     ...reconciliationQuantities.map(([key, label]) => ({ label, value: (r: Record<string, unknown>) => r[key], numeric: true })),
   ], report.reconciliation as unknown as Record<string, unknown>[]);
 }
+
+/** Provisional UI value; PostgreSQL remains authoritative and rounds once per loss row. */
+export function lossValueCentavos(quantity:string,unitCostCentavos:string,unitFactor:string){
+ if(!/^\d{1,14}(?:\.\d{1,6})?$/.test(quantity)||!/^\d+$/.test(unitCostCentavos)||!/^\d{1,14}(?:\.\d{1,6})?$/.test(unitFactor))throw new Error("Check the quantity, documented cost and unit conversion.");
+ const q=new CostDecimal(quantity),cost=new CostDecimal(unitCostCentavos),factor=new CostDecimal(unitFactor);
+ if(factor.lte(0))throw new Error("The purchase unit needs a positive conversion.");
+ return q.times(cost).div(factor).toDecimalPlaces(0,Decimal.ROUND_HALF_UP).toFixed(0);
+}
