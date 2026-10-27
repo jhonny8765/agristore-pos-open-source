@@ -9,7 +9,7 @@ import type {
 } from "@agristore/domain";
 import { setting, setSetting, type PosDatabase, type Transport } from "@agristore/offline";
 import { recordColumns } from "./record-columns";
-import { commandError } from "./command-error";
+import { commandError, isDatabaseRejection } from "./command-error";
 
 export const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL ??
@@ -131,8 +131,7 @@ export function cloudTransport(lease: Lease, db?: PosDatabase): Transport {
           sale as unknown as Record<string, unknown>,
         );
       } catch (e) {
-        const code = (e as { code?: string }).code;
-        if (code && /^(P0001|22|23)/.test(code))
+        if (isDatabaseRejection(e))
           return {
             transactionId: sale.transactionId,
             status: "review",

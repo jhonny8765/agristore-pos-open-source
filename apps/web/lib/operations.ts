@@ -1,6 +1,7 @@
 import { stableJSON } from "@agristore/domain";
 import { PosDatabase, setting, setSetting } from "@agristore/offline";
 import { command } from "./api";
+import { isDatabaseRejection } from "./command-error";
 export interface PendingOperation {
   key: string;
   action: string;
@@ -67,9 +68,8 @@ export async function retryOperation(
     await settleOperation(db, pending);
     return result;
   } catch (e) {
-    const code = (e as { code?: string })?.code;
     // A database rejection is an authoritative rollback. An interrupted response is ambiguous and retained.
-    if (code && /^(P0001|22|23)/.test(code))
+    if (isDatabaseRejection(e))
       await settleOperation(db, pending);
     else
       await settleOperation(db, pending,
