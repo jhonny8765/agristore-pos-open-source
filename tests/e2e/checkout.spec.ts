@@ -309,3 +309,74 @@ test("a cashier with 100000 retained receipts can reload, sell and export only u
   }));
   expect(count).toBe(100001);
 });
+
+
+test("multipart recovery downloads can retry the same part without advancing or changing sales", async ({ page }) => {
+  await practice(page);
+  await buy(page);
+  // Synthetic pending receipts in an isolated practice profile exercise the
+  // real 1000-record export boundary without uploading any business records.
+  await page.evaluate(async () => {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open("agristore-practice-v1");
+      request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error);
+    });
+    try {
+      const original = await new Promise<{id:string;payload:{transactionId:string}}>((resolve, reject) => {
+        const tx = db.transaction("sales", "readonly"); const row = tx.objectStore("sales").openCursor();
+        row.onsuccess = () => resolve(row.result!.value); row.onerror = () => reject(row.error);
+      });
+      await new Promise<void>((resolve, reject) => {
+        const tx = db.transaction("sales", "readwrite"); const store = tx.objectStore("sales");
+        for (let n = 1; n <= 1000; n++) {
+          const id = `61000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+          store.put({...original, id, payload:{...original.payload, transactionId:id}});
+        }
+        tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error); tx.onabort = () => reject(tx.error);
+      });
+    } finally { db.close(); }
+  });
+  await page.reload();
+  await page.getByRole("button", { name: /^Sync center(?:\s+\d+)?$/ }).click();
+  const { readFile } = await import("node:fs/promises");
+  async function getDownload(action: string) {
+    const started = page.waitForEvent("download");
+    await page.getByRole("button", { name: action, exact: true }).click();
+    const file = await started;
+    const text = await readFile((await file.path())!, "utf8");
+    return { name: file.suggestedFilename(), text, data: JSON.parse(text) };
+  }
+  const first = await getDownload("Export recovery file");
+  const notice = page.getByRole("region", { name: "Prepared recovery download" });
+  await expect(notice).toContainText(first.name);
+  await expect(notice).toContainText("Part 1 of 2");
+  await expect(notice).toContainText("cannot confirm the file was saved");
+  await expect(page.getByRole("button", { name: "Export recovery part 2 of 2", exact: true })).toBeEnabled();
+  const retryFirst = await getDownload("Download this part again");
+  expect(retryFirst.name).toBe(first.name); expect(retryFirst.text).toBe(first.text);
+  await expect(page.getByRole("button", { name: "Export recovery part 2 of 2", exact: true })).toBeEnabled();
+  const last = await getDownload("Export recovery part 2 of 2");
+  expect(first.data.archive.recordCount).toBe(1000); expect(last.data.archive.recordCount).toBe(1);
+  expect(last.data.archive.id).toBe(first.data.archive.id);
+  await expect(notice).toContainText(last.name);
+  await expect(notice).toContainText("Part 2 of 2");
+  const retryLast = await getDownload("Download this part again");
+  expect(retryLast.name).toBe(last.name); expect(retryLast.text).toBe(last.text);
+  const ids = [...first.data.sales, ...last.data.sales].map((sale: {id:string}) => sale.id);
+  expect(new Set(ids).size).toBe(1001);
+  const retained = await page.evaluate(() => new Promise<{id:string;status:string}[]>((resolve, reject) => {
+    const request = indexedDB.open("agristore-practice-v1");
+    request.onsuccess = () => {
+      const db = request.result; const tx = db.transaction("sales", "readonly"); const rows = tx.objectStore("sales").getAll();
+      rows.onsuccess = () => resolve(rows.result); tx.oncomplete = () => db.close(); tx.onerror = () => reject(tx.error);
+    }; request.onerror = () => reject(request.error);
+  }));
+  expect(retained).toHaveLength(1001);
+  expect(retained.every(sale => sale.status === "pending")).toBe(true);
+  expect(retained.map(sale => sale.id).sort()).toEqual(ids.sort());
+  await page.getByRole("button", {name:"Settings", exact:true}).click();
+  await expect(page.getByRole("region", {name:"Prepared recovery download"})).toContainText(last.name);
+  await page.reload();
+  await page.getByRole("button", {name:"Settings", exact:true}).click();
+  await expect(page.getByRole("region", {name:"Prepared recovery download"})).toHaveCount(0);
+});

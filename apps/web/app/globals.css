@@ -2551,3 +2551,7 @@ td small {
 .measured-quantity .field { display: grid; min-width: 0; }
 .measured-quantity input, .measured-quantity select { width: 100%; min-width: 0; }
 .measured-quantity small { display: block; margin-block: 6px 10px; overflow-wrap: anywhere; }
+
+.recovery-download { min-width: 0; margin-block: 18px; padding-block: 16px; border-block: 1px solid var(--line); overflow-wrap: anywhere; }
+.recovery-download h3 { margin-block: 0 8px; }
+.recovery-filename { font-weight: 600; overflow-wrap: anywhere; }

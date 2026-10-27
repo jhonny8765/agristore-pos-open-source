@@ -219,6 +219,7 @@ export function StoreApp() {
   const [localHistoryLimit, setLocalHistoryLimit] = useState(50);
   const [hasOlderLocal, setHasOlderLocal] = useState(false);
   const [recoveryArchive, setRecoveryArchive] = useState<{ id: string; next: number; parts: number; scope: string }>();
+  const [recoveryDownload, setRecoveryDownload] = useState<{ scope: string; filename: string; data: Awaited<ReturnType<typeof exportRecovery>> }>();
   const [allPendingCount, setAllPendingCount] = useState(0);
   const [allOperationCount, setAllOperationCount] = useState(0);
   const [practice, setPractice] = useState(false);
@@ -296,6 +297,10 @@ export function StoreApp() {
   }, []);
   const selectedBranch = branchList.find((b) => b.id === branchId);
   const isOwner = member?.role === "owner";
+  const recoveryScopeKey = member && branchId
+    ? JSON.stringify([member.organizationId, branchId, member.userId, member.role]) : undefined;
+  const currentRecoveryArchive = recoveryArchive?.scope === recoveryScopeKey ? recoveryArchive : undefined;
+  const currentRecoveryDownload = recoveryDownload?.scope === recoveryScopeKey ? recoveryDownload : undefined;
   const isStock = member?.role === "stock_staff";
   const pending = sales.filter((s) => s.status !== "synced");
   const context = useCallback(() => {
@@ -524,6 +529,8 @@ export function StoreApp() {
       // Auth broadcasts across windows. Clear this window immediately as well
       // as fencing any outstanding downloads; immutable sales remain intact.
       contextGeneration.current++;
+      setRecoveryArchive(undefined);
+      setRecoveryDownload(undefined);
       cloudRequest.current++;
       useCart.getState().clear();
       setSignedIn(false);
@@ -542,7 +549,6 @@ export function StoreApp() {
       setSnapshotAt(undefined);
       setLastSync(undefined);
       setOpeningImport(undefined);
-      setRecoveryArchive(undefined);
       void clearAccountCache(db).catch(fail);
     });
     return () => subscription.unsubscribe();
@@ -642,6 +648,8 @@ export function StoreApp() {
     const form = new FormData(event.currentTarget);
     await run(async () => {
       contextGeneration.current++;
+      setRecoveryArchive(undefined);
+      setRecoveryDownload(undefined);
       setCloud({});
       setProducts([]);
       setStock(new Map());
@@ -700,6 +708,8 @@ export function StoreApp() {
       });
       const m = (await memberships())[0];
       contextGeneration.current++;
+      setRecoveryArchive(undefined);
+      setRecoveryDownload(undefined);
       setMember(m);
       const b = await fetchBranches(m.organizationId);
       setBranchList(b);
@@ -742,16 +752,37 @@ export function StoreApp() {
     });
   }
   async function exportLocalRecovery() {
-    if (!member || !branchId) return;
+    if (!member || !branchId || !recoveryScopeKey)
+      throw new Error("Select your authorized branch before exporting recovery records.");
+    const generation = contextGeneration.current;
     const scope = { organizationId: member.organizationId, branchId, cashierId: isOwner ? undefined : member.userId };
-    const scopeKey = JSON.stringify(scope);
-    const data = recoveryArchive?.scope === scopeKey
-      ? await exportRecoveryPart(db, recoveryArchive.id, recoveryArchive.next, scope)
+    const data = currentRecoveryArchive
+      ? await exportRecoveryPart(db, currentRecoveryArchive.id, currentRecoveryArchive.next, scope)
       : await exportRecovery(db, scope);
-    download(`agristore-recovery-${data.archive.id}-part-${data.archive.part}-of-${data.archive.parts}.json`, data);
+    if (generation !== contextGeneration.current) return;
+    const filename = `agristore-recovery-${data.archive.id}-part-${data.archive.part}-of-${data.archive.parts}.json`;
+    // Keep only this bounded part for a blocked/misplaced download retry. It is
+    // never a second export or a new checkout, and is cleared on context changes.
+    setRecoveryDownload({ scope: recoveryScopeKey, filename, data });
     setRecoveryArchive(data.archive.part < data.archive.parts
-      ? { id: data.archive.id, next: data.archive.part + 1, parts: data.archive.parts, scope: scopeKey } : undefined);
-    notify(`Recovery part ${data.archive.part} of ${data.archive.parts} downloaded (${data.sales.length} records). Keep every part. New sales after this export need a new recovery file. Confirmed history remains in the cloud and on this PC.`);
+      ? { id: data.archive.id, next: data.archive.part + 1, parts: data.archive.parts, scope: recoveryScopeKey } : undefined);
+    download(filename, data);
+    notify(`Download started for recovery part ${data.archive.part} of ${data.archive.parts}. Check your browser Downloads or chosen folder; the app cannot confirm the file was saved.`);
+  }
+  function recoveryDownloadNotice() {
+    if (!currentRecoveryDownload) return null;
+    const { filename, data } = currentRecoveryDownload;
+    return <section className="recovery-download" aria-label="Prepared recovery download">
+      <h3>Check your recovery download</h3>
+      <p>Part {data.archive.part} of {data.archive.parts} · {data.archive.recordCount} records in this file · {data.archive.totalRecords} in this export.</p>
+      <p className="recovery-filename">{filename}</p>
+      <p>Check your browser Downloads or chosen folder. The app cannot confirm the file was saved. If it is missing or blocked, download this same part again.</p>
+      <Button variant="outline" disabled={busy} onClick={() => void run(async () => {
+        download(filename, data);
+        notify(`Download started again for part ${data.archive.part} of ${data.archive.parts}. Check Downloads or your chosen folder. Original records are unchanged.`);
+      }, false)}>Download this part again</Button>
+      <p className="muted">Keep every part private. New sales need a new export. This retry keeps the same records and does not advance to the next part. After closing or reloading the app, start a fresh export for any unresolved records.</p>
+    </section>;
   }
   async function finishSale(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -825,6 +856,9 @@ export function StoreApp() {
   async function logout() {
     await run(async () => {
       if (practice) {
+        contextGeneration.current++;
+        setRecoveryArchive(undefined);
+        setRecoveryDownload(undefined);
         localStorage.removeItem("agristore-mode");
         cart.clear();
         setPractice(false);
@@ -842,6 +876,8 @@ export function StoreApp() {
           "Wait for the current synchronization to finish before signing out.",
         );
       contextGeneration.current++;
+      setRecoveryArchive(undefined);
+      setRecoveryDownload(undefined);
       const result = await supabase.auth.signOut();
       if (result.error) throw result.error;
       await clearAccountCache(db);
@@ -1259,6 +1295,8 @@ export function StoreApp() {
                 const nextBranchId = e.target.value;
                 void run(async () => {
                   contextGeneration.current++;
+                  setRecoveryArchive(undefined);
+                  setRecoveryDownload(undefined);
                   const snapshot = await requestSnapshot(db, {
                     organizationId: member.organizationId,
                     branchId: nextBranchId,
@@ -2958,11 +2996,12 @@ export function StoreApp() {
                 <Button
                   variant="outline"
                   disabled={busy}
-                  onClick={() => void exportLocalRecovery().catch(fail)}
+                  onClick={() => void run(exportLocalRecovery, false)}
                 >
                   <ArrowDownToLine size={16} />
-                  {recoveryArchive ? `Export recovery part ${recoveryArchive.next} of ${recoveryArchive.parts}` : "Export recovery file"}
+                  {currentRecoveryArchive ? `Export recovery part ${currentRecoveryArchive.next} of ${currentRecoveryArchive.parts}` : "Export recovery file"}
                 </Button>
+                {recoveryDownloadNotice()}
                 <p>
                   Contains transaction records. Keep this file private. Pending
                   sales are retained when you sign out. Operation-only files can
@@ -3069,7 +3108,7 @@ export function StoreApp() {
                   <h2>Application & recovery</h2>
                   <StorageHealth />
                   <p className="muted">
-                    Install AgriStore from Edge’s app menu after opening your
+                    Install AgriStore from your browser’s app menu after opening your
                     shift online. Keep this dedicated browser profile and its
                     site data.
                   </p>
@@ -3088,9 +3127,9 @@ export function StoreApp() {
                       <dt>Application cache</dt>
                       <dd>
                         {registration?.active
-                          ? "Installed"
+                          ? "Offline files ready"
                           : registration
-                            ? "Installing…"
+                            ? "Preparing offline files…"
                             : "Available in production build"}
                       </dd>
                     </div>
@@ -3098,10 +3137,11 @@ export function StoreApp() {
                   <Button
                     variant="outline"
                     disabled={busy}
-                    onClick={() => void exportLocalRecovery().catch(fail)}
+                    onClick={() => void run(exportLocalRecovery, false)}
                   >
-                    {recoveryArchive ? `Export recovery part ${recoveryArchive.next} of ${recoveryArchive.parts}` : "Export local recovery file"}
+                    {currentRecoveryArchive ? `Export recovery part ${currentRecoveryArchive.next} of ${currentRecoveryArchive.parts}` : "Export local recovery file"}
                   </Button>
+                  {recoveryDownloadNotice()}
                   <Button
                     variant="outline"
                     disabled={
