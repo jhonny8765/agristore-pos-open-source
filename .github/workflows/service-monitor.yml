@@ -1,6 +1,13 @@
 name: POS availability monitor
+run-name: ${{ github.event_name == 'workflow_dispatch' && inputs.notification_test && 'TEST email notification (no store outage)' || 'POS availability check' }}
 on:
   workflow_dispatch:
+    inputs:
+      notification_test:
+        description: 'Send a clearly labelled intentional failed-workflow notification test'
+        required: false
+        type: boolean
+        default: false
   schedule:
     - cron: '7,22,37,52 * * * *'
 permissions:
@@ -10,7 +17,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   availability:
-    if: vars.POS_MONITOR_ENABLED == 'true'
+    if: vars.POS_MONITOR_ENABLED == 'true' && !inputs.notification_test
     runs-on: ubuntu-24.04
     timeout-minutes: 3
     steps:
@@ -22,3 +29,13 @@ jobs:
         env:
           POS_MONITOR_URL: ${{ vars.POS_MONITOR_URL }}
         run: node scripts/service-monitor.mjs
+  notification-test:
+    name: TEST email delivery - intentional failure, no store outage
+    if: github.event_name == 'workflow_dispatch' && inputs.notification_test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 1
+    steps:
+      - name: Emit the user-requested test notification
+        run: |
+          echo "::error title=TEST email notification::This is an intentional notification-delivery test. No store outage was simulated or observed."
+          exit 1
