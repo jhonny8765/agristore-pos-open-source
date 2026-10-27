@@ -1569,7 +1569,7 @@ test("partial transfers, held goods and stock issues reconcile through the owner
   await held.getByLabel("Held-goods outcome",{exact:true}).selectOption("release");
   await held.getByLabel("Inspection / disposition reason",{exact:true}).fill("TEST inspected quarter kilogram is saleable");
   await held.getByRole("button",{name:"Record outcome",exact:true}).click();
-  await expect(held.getByRole("cell",{name:"0.75",exact:true})).toBeVisible();
+  await expect(held.getByRole("cell",{name:"0.75 kg",exact:true})).toBeVisible();
   const issue=page.getByRole("form",{name:"Record stock issue",exact:true});
   await issue.getByLabel("Issue quantity (base units)").fill("0.5");
   await issue.getByLabel("Issue evidence / reason").fill("TEST damaged stock weighed separately");
