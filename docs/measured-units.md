@@ -111,3 +111,36 @@ In the example above, undoing the mistaken ₱15 refund restores ₱15 to the co
 5. Example: a corrected liquid inspection of document **200 ml**, accepted **125 ml**, held **25 ml**, rejected **50 ml** adds **0.125 liter** saleable and **0.025 liter** held. Rejected goods do not enter stock. From an otherwise unreceived three-liter order, the unreceived balance is **2.85 liters**.
 
 If any save loses its response, keep the original request in **Sync center** and retry it. Recovery files preserve original receipt-unit quantities, correction links and request IDs. Do not create another refund or delivery to replace an uncertain save, and do not hand out cash again merely because a retry succeeds.
+
+## Damaged stock, held goods and purchase-cost losses
+
+### Record actual damaged or spilled goods
+
+1. Open **Inventory → Damage, spillage and other stock issues**. Choose the correct product and lot.
+2. For liquid stock measured in liters, choose **ml** beside **Issue quantity** and enter the measured volume. For rope, enter meters, including exact fractions such as `1/4`. Whole-piece products still require whole pieces.
+3. Check the **Recorded** stock equivalent. Changing the product clears the previous measured amount.
+4. Choose the actual category and physical disposition. **Remove from sale and hold separately** means the goods still exist but cannot be sold. **Goods consumed, missing or disposed** records a direct removal after approval. Do not guess that an unexplained difference is theft or erase it as damage.
+5. Enter evidence, submit the issue, then have the owner inspect and approve it. Submission alone does not change stock. Approval removes the measured quantity from saleable stock once; held goods remain separately tracked.
+
+### Inspect and resolve held goods
+
+1. Keep held goods physically separate. Find the correct product/lot under **Held goods** and check its remaining quantity. Liquid rows show liters and ml together.
+2. The owner chooses **Record held-goods outcome**, then the entry unit and actual quantity being processed.
+3. Choose the real outcome: release inspected goods for sale, dispose/write off, or return to supplier. Record inspection evidence and save once.
+4. Only **release** adds back to saleable stock. Disposal and supplier return reduce the held balance without deducting saleable stock a second time. Expired goods cannot be released for sale, and no outcome can exceed the remaining hold.
+
+Example from a 10-liter starting balance: approve a **250 ml** hold, leaving **9.75 liters saleable + 250 ml held**. Release **100 ml** after inspection: **9.85 liters saleable + 150 ml held**. Dispose **125 ml**: saleable stays **9.85 liters**, with **25 ml held**. Return the last **25 ml** to the supplier: held becomes zero; saleable remains **9.85 liters**. The posted held loss is only the **125 ml disposed**. The supplier return is a separate authorised removal.
+
+### Value losses from the purchase document
+
+1. Open **Overview → Stock loss at purchase cost**. Choose the branch/date range and removal category. Missing documentary cost is shown as unvalued, not as a free loss.
+2. Find the loss source and its removed quantity. Liquid loss rows show the exact ml equivalent; stock reconciliation and CSV quantities remain in the stated canonical base unit.
+3. Choose **Record purchase cost** and select the actual purchase unit on the supplier/opening-stock document. Enter the cost of **one** such unit. For example, `₱25 per 500 ml container` is different from `₱25 per liter`.
+4. Read the removal-value preview before saving. Changing the purchase unit clears the entered amount, so an old container cost cannot silently become a per-liter cost. Enter the document reference and explanation, then save the evidence. The server confirms the valuation.
+5. If documentary cost was wrong, use **Record corrected purchase cost**. Earlier versions remain in purchase-cost history. A cost correction changes report value only; it does not change stock or cash.
+
+At **₱25 per 500 ml container**, a **125 ml** disposal is **₱6.25**. At **₱1,000 per 100 m roll**, a **0.25 m** loss is **₱2.50**. A separate **50 ml** spill at the same container cost adds **₱2.50**, making **₱11.25** posted losses. A **25 ml supplier return** is **₱1.25** in other authorised removals, separate from the loss subtotal. Correcting only the disposal row to a documented **₱30 per container** changes that row to **₱7.50** and the loss subtotal to **₱12.50**, with all stock quantities unchanged.
+
+Money is rounded once for each complete loss row, then row values are added. Do not round a per-ml price first. At a test cost of **₱0.03 per 500 ml**, a 249 ml row is one centavo and a 250 ml row is two centavos. Both quantities stay recorded exactly even when a very small valued row rounds to zero centavos. These are test examples, not your store's actual costs.
+
+If a save loses its response, use **Sync center → Retry original request**. Recovery exports retain the exact base quantity and permanent request ID. Do not enter the same disposal or issue again to replace an uncertain save. Assign and investigate unresolved differences; the report cannot establish why goods went missing.
