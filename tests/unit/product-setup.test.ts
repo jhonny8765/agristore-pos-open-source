@@ -97,3 +97,8 @@ describe("explicit product selling setup", () => {
     expect(() => productSetup(form({ minimum: "-1" }))).toThrow(/low-stock/);
   });
 });
+
+it("uses real metres per rope roll with a separately priced cut metre",()=>{
+ expect(productSetup(form({baseUnit:"meter",unit:"Roll",factor:"100",loose:"on",basePrice:"12.50",baseCost:"8"})).units).toEqual([{name:"Roll",factor:"100",price:90000,cost:70000},{name:"Meter",factor:"1",price:1250,cost:800}]);
+ expect(productSetup(form({baseUnit:"liter",unit:"500 ml bottle",factor:"0.5"})).units[0].factor).toBe("0.5");
+});

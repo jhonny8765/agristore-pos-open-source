@@ -36,8 +36,8 @@ export function ProductSetupForm({
   const [saved, setSaved] = useState("");
   const errorId = useId();
   const measurement =
-    base === "kg" ? "kg" : base === "liter" ? "liter" : "piece";
-  const retail = base === "kg" ? "kilo" : base === "liter" ? "liter" : "piece";
+    base === "kg" ? "kg" : base === "liter" ? "liter" : base === "meter" ? "meter" : "piece";
+  const retail = base === "kg" ? "kilo" : base === "liter" ? "liter" : base === "meter" ? "meter" : "piece";
   let packed = false;
   try {
     packed = !new Decimal(factor).eq(1);
@@ -45,7 +45,7 @@ export function ProductSetupForm({
 
   function choose(next: string) {
     setMode(next);
-    setBase(next === "sealed" ? "piece" : next === "liquid" ? "liter" : "kg");
+    setBase(next === "sealed" ? "piece" : next === "liquid" ? "liter" : next === "length" ? "meter" : "kg");
     setUnit(
       next === "sack"
         ? "Sack"
@@ -55,7 +55,7 @@ export function ProductSetupForm({
             ? "Packet"
             : next === "liquid"
               ? "Liter"
-              : "",
+              : next === "length" ? "Meter" : "",
     );
     setFactor(next === "sack" ? "50" : "1");
     setLoose(false);
@@ -144,7 +144,8 @@ export function ProductSetupForm({
               <option value="sack">Sacks / bags</option>
             <option value="weight">Loose kilos only</option>
               <option value="sealed">Sealed items / pieces</option>
-            <option value="liquid">Measured liters</option>
+            <option value="liquid">Measured liters / milliliters</option>
+            <option value="length">Rope / measured meters</option>
               <option value="custom">Other pack size</option>
           </select>
         </Field>
@@ -168,6 +169,7 @@ export function ProductSetupForm({
                 >
                   <option value="kg">Kilograms</option>
                   <option value="liter">Liters</option>
+                  <option value="meter">Meters</option>
                   <option value="piece">Pieces</option>
                 </select>
               </Field>
@@ -217,7 +219,7 @@ export function ProductSetupForm({
                   ? "Also sell loose kilos"
                   : base === "liter"
                     ? "Also sell measured liters"
-                    : "Also sell individual pieces"}
+                    : base === "meter" ? "Also sell cut lengths in meters" : "Also sell individual pieces"}
               </label>
             )}
             {packed && loose && (
@@ -239,7 +241,7 @@ export function ProductSetupForm({
                   ? ` Only the configured ${unit || "pack"} price will be available.`
                   : base === "kg"
                     ? " Cashiers can enter kilos, grams or a peso budget."
-                    : " Cashiers use the configured selling unit and quantity."}
+                    : base === "liter" ? " For a one-liter selling unit, cashiers can switch between liters and milliliters. A 500 ml bottle is 0.5 liter; keep sealed bottles as pieces if they are never opened." : base === "meter" ? " Cashiers can enter cut lengths such as 0.5 or 1.25 meters. A roll needs its actual meter length and a separate cut-length price." : " Cashiers use the configured selling unit and quantity."}
             </p>
             <Field label={`Low-stock alert (${measurement})`}>
               <input

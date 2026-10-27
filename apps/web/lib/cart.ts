@@ -4,7 +4,7 @@ import type { SaleItem } from "@agristore/domain";
 import { quantityFromDisplay } from "./quantity-entry";
 export interface LineDraft {
   draft: string;
-  display: "kg" | "g";
+  display: "kg" | "g" | "liter" | "ml";
   budgetMode: boolean;
   budget: string;
   budgetError: string;
@@ -21,7 +21,7 @@ export function draftLineTotal(
 ) {
   if (!draft) return null;
   try {
-    const quantity = quantityFromDisplay(draft.draft, draft.display === "g");
+    const quantity = quantityFromDisplay(draft.draft, draft.display === "g" || draft.display === "ml");
     return new Decimal(quantity).eq(item.quantity) ? item.lineTotal : null;
   } catch {
     return null;

@@ -38,7 +38,7 @@ export function SaleLineEditor({
   const { draft, display, budgetMode, budget, budgetError, original, focus } =
     cart.drafts[lineId];
   const setDraft = (draft: string) => cart.edit(lineId, { draft });
-  const setDisplay = (display: "kg" | "g") => cart.edit(lineId, { display });
+  const setDisplay = (display: "kg" | "g" | "liter" | "ml") => cart.edit(lineId, { display });
   const setBudgetMode = (budgetMode: boolean) =>
     cart.edit(lineId, { budgetMode });
   const setBudget = (budget: string) => cart.edit(lineId, { budget });
@@ -55,11 +55,12 @@ export function SaleLineEditor({
   const errorId = useId();
   const kilo = kiloUnit(product);
   const loose = !!kilo && item.unitId === kilo.id;
-  const grams = loose && display === "g";
-  const quantityLabel = `Quantity (${loose ? (grams ? "g" : "kg") : item.unitName})`;
+  const liquid = product.baseUnit === "liter" && new Decimal(item.factor).eq(1);
+  const grams = (loose && display === "g") || (liquid && display === "ml");
+  const quantityLabel = `Quantity (${loose ? (grams ? "g" : "kg") : liquid ? (grams ? "ml" : "liter") : item.unitName})`;
   const error = cart.quantityErrors[lineId];
   const displayedAmount = draftLineTotal(item, { draft, display });
-  const increment = loose ? (grams ? "250" : "0.25") : "1";
+  const increment = loose || liquid ? (grams ? "250" : "0.25") : product.baseUnit === "meter" && new Decimal(item.factor).eq(1) ? "0.25" : "1";
 
   function report(error: unknown) {
     cart.quantityError(
@@ -206,24 +207,24 @@ export function SaleLineEditor({
                 <Plus size={13} />
               </button>
             </div>
-            {loose && (
+            {(loose || liquid) && (
               <select
-                aria-label={`Weight entry for ${item.name}`}
-                value={display}
+                aria-label={`${liquid ? "Volume" : "Weight"} entry for ${item.name}`}
+                value={liquid ? (grams ? "ml" : "liter") : display}
                 disabled={disabled}
                 onChange={(event) => {
-                  const inGrams = event.target.value === "g";
+                  const inGrams = event.target.value === "g" || event.target.value === "ml";
                   if (!draft.trim()) {
-                    setDisplay(inGrams ? "g" : "kg");
+                    setDisplay(liquid ? (inGrams ? "ml" : "liter") : (inGrams ? "g" : "kg"));
                     cart.quantityError(
                       lineId,
-                      "Enter the customer's weight in kg or grams.",
+                      liquid ? "Enter the measured volume in liters or milliliters." : "Enter the customer's weight in kg or grams.",
                     );
                     return;
                   }
                   try {
                     const kg = quantityFromDisplay(draft, grams);
-                    setDisplay(inGrams ? "g" : "kg");
+                    setDisplay(liquid ? (inGrams ? "ml" : "liter") : (inGrams ? "g" : "kg"));
                     write(
                       new Decimal(kg).mul(inGrams ? 1000 : 1).toFixed(),
                       item.unitId,
@@ -235,8 +236,7 @@ export function SaleLineEditor({
                   }
                 }}
               >
-                <option value="kg">kg</option>
-                <option value="g">g</option>
+                {liquid ? <><option value="liter">liter</option><option value="ml">ml</option></> : <><option value="kg">kg</option><option value="g">g</option></>}
               </select>
             )}
           </div>
@@ -252,6 +252,7 @@ export function SaleLineEditor({
           {error}
         </p>
       )}
+      {liquid && displayedAmount !== null && <p className="line-measure">{item.quantity} liter = {new Decimal(item.quantity).mul(1000).toFixed()} ml</p>}
       {loose && displayedAmount !== null && (
         <p className="line-measure">
           {item.quantity} kg = {new Decimal(item.quantity).mul(1000).toFixed()}{" "}

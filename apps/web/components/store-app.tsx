@@ -1752,9 +1752,9 @@ export function StoreApp() {
                   </small>
                 </div>
                 <div>
-                  <span>Cash refunds</span>
-                  <strong>{money(Number(summary.refunds ?? 0))}</strong>
-                  <small>Linked to the original sale</small>
+                  <span>Net cash refunds</span>
+                  <strong>{money(Number(summary.netRefunds ?? summary.refunds ?? 0))}</strong>
+                  <small>Paid {money(Number(summary.refunds ?? 0))} · Recovered {money(Number(summary.refundRecoveries ?? 0))}</small>
                 </div>
                 <div>
                   <span>In-transit transfers</span>
@@ -1997,7 +1997,7 @@ export function StoreApp() {
                   <section className="panel">
                     <h2>Add a product</h2>
                     <p className="muted">
-                      Choose pack, weight or piece selling. Each enabled selling
+                      Choose pack, weight, volume, length or piece selling. Each enabled selling
                       unit has its own price; loose selling is optional.
                     </p>
                     <ProductSetupForm
@@ -2503,7 +2503,7 @@ export function StoreApp() {
                         ))}
                     </select>
                   </Field>
-                  <Field label="Quantity in base units (kg / liter / piece)">
+                  <Field label="Quantity in base units (kg / liter / meter / piece)">
                     <input
                       name="quantity"
                       type="number"
@@ -2654,12 +2654,12 @@ export function StoreApp() {
                           {s.sale_reversals &&
                           (!Array.isArray(s.sale_reversals) ||
                             s.sale_reversals.length > 0) ? (
-                            <span className="status-tag">Refunded</span>
+                            <><span className="status-tag">Refunded</span>{Array.isArray(s.sale_refund_corrections)&&s.sale_refund_corrections.length>0&&<p>Correction recorded · check details</p>}{isOwner&&<Button size="sm" variant="outline" disabled={!online||busy} onClick={()=>setPartialRefundSaleId(String(s.id))}>Refund details</Button>}</>
                           ) : (
                             <>
                             {Array.isArray(s.sale_partial_refunds)&&s.sale_partial_refunds.length>0&&<p className="status-tag">Refund recorded · check details</p>}
                             {isOwner&&<Button size="sm" variant="outline" disabled={!online||busy} onClick={()=>setPartialRefundSaleId(String(s.id))}>Partial refund</Button>}
-                            {isOwner && (!Array.isArray(s.sale_partial_refunds)||s.sale_partial_refunds.length===0) && (
+                            {isOwner && (!Array.isArray(s.sale_partial_refunds)||s.sale_partial_refunds.length===0) && (!Array.isArray(s.sale_refund_corrections)||s.sale_refund_corrections.length===0) && (
                               <ApprovalForm
                                 action="Full refund"
                                 label="Refund reason"
@@ -2712,7 +2712,7 @@ export function StoreApp() {
                 />
               )}
               {!practice&&isOwner&&partialRefundSaleId&&branchSales.some(s=>s.id===partialRefundSaleId)&&<section className="refund-detail" aria-label="Selected sale partial refund">
-                <h3>Refund selected quantities</h3><p>Receipt: {String(branchSales.find(s=>s.id===partialRefundSaleId)?.receipt)}</p>
+                <h3>Refund quantities and corrections</h3><p>Receipt: {String(branchSales.find(s=>s.id===partialRefundSaleId)?.receipt)}</p>
                 <Button size="sm" variant="ghost" disabled={busy} onClick={()=>setPartialRefundSaleId(undefined)}>Close refund details</Button>
                 <PartialRefundControl key={`partial:${member.organizationId}:${branchId}:${partialRefundSaleId}`} db={db} organizationId={member.organizationId} branchId={branchId} saleId={partialRefundSaleId} actorId={member.userId} shiftId={lease?.shiftId} readDisabled={!online||busy} disabled={!online||busy||!lease||allPendingCount>0||syncing||cart.items.length>0} execute={fn=>run(fn,true,true)}/>
               </section>}

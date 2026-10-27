@@ -104,6 +104,18 @@ command('record_sale',partialSale);
 const partialRequest={...ctx(70),saleId:id(72),refundId:id(74),shiftId:partialShift.shiftId,expectedRefundVersion:0,expectedAmount:1600,reference:'TEST saved partial refund',reason:'TEST half kilo refunded with quarter kilo saleable and quarter held',physicalConfirmed:true,items:[{lineIndex:0,quantity:'0.5',returnedQuantity:'0.5',disposition:'mixed',resalableQuantity:'0.25'}]};
 command('partial_refund_sale',partialRequest);
 command('close_shift',{...ctx(70),deviceId:id(71),shiftId:partialShift.shiftId,countedCash:11600});
+// Keep a mistaken refund, immutable undo and linked replacement through real pg_restore.
+sql(`insert into public.branches(id,organization_id,name,code) values('${id(80)}','${id(2)}','TEST restored corrected refund','RESTORE4');`);
+command('register_device',{...ctx(80),deviceId:id(81),name:'TEST correction restore drawer'});
+const correctionShift=command('open_shift',{...ctx(80),deviceId:id(81),openingCash:10000});
+command('receive_stock',{...ctx(80),receiptId:id(82),source:'purchase',reference:'TEST correction restore goods',items:[{productId:id(4),unitId:id(7),quantity:'5'}]});
+const correctionSale={...sale,...ctx(80),transactionId:id(83),deviceId:id(81),shiftId:correctionShift.shiftId,total:3200,cashReceived:5000,items:[{...sale.items[0],quantity:'1',lineTotal:3200}]};command('record_sale',correctionSale);
+const mistakenRefund={...partialRequest,...ctx(80),saleId:id(83),refundId:id(84),shiftId:correctionShift.shiftId};command('partial_refund_sale',mistakenRefund);
+const correctionCheck=command('refund_correction_check',{...ctx(80),saleId:id(83),refundId:id(84),refundKind:'partial',shiftId:correctionShift.shiftId});
+assert.equal(correctionCheck.eligible,true);
+const refundCorrection={...ctx(80),saleId:id(83),refundId:id(84),refundKind:'partial',shiftId:correctionShift.shiftId,correctionId:id(85),expectedLedgerRevision:correctionCheck.ledgerRevision,expectedRefundVersion:correctionCheck.refundVersion,cashRestoredCentavos:1600,reference:'TEST retained recovered refund cash',reason:'TEST mistaken physical quantities and full cash recovery verified',cashConfirmed:true,goodsConfirmed:true,queuesConfirmed:true};command('correct_refund',refundCorrection);
+const replacementRefund={...mistakenRefund,refundId:id(86),expectedRefundVersion:2,expectedAmount:800,correctsCorrectionId:id(85),reference:'TEST linked replacement refund',items:[{lineIndex:0,quantity:'0.25',returnedQuantity:'0.125',disposition:'resalable'}]};command('partial_refund_sale',replacementRefund);
+command('close_shift',{...ctx(80),deviceId:id(81),shiftId:correctionShift.shiftId,countedCash:12400});
 // Compare retained content, not just row counts or one projected balance.
 const fingerprints = target => lastJSON(sql(fingerprintSQL(id(2)),target));
 const original = fingerprints("postgres");
@@ -144,6 +156,13 @@ try {
   assert.equal(command('record_loss_cost',costEvidence,database).duplicate,true);
   for(const [action,payload] of [['create_purchase_order',purchaseOrder],['purchase_order_event',orderApproval],['inspect_delivery',rejectedDelivery],['record_delivery_claim',supplierProgress],['record_delivery_claim',supplierResolution]]) assert.equal(command(action,payload,database).duplicate,true);
   assert.equal(command('partial_refund_sale',partialRequest,database).duplicate,true);
+  for(const [action,payload] of [['correct_refund',refundCorrection],['partial_refund_sale',mistakenRefund],['partial_refund_sale',replacementRefund]])assert.equal(command(action,payload,database).duplicate,true);
+  const correctedHistory=command('partial_refund_history',{...ctx(80),saleId:id(83)},database).rows;
+  assert.equal(correctedHistory.find(r=>r.id===id(84)).correction.replacementId,id(86));
+  assert.equal(correctedHistory.find(r=>r.id===id(86)).correctsCorrectionId,id(85));
+  assert.equal(command('partial_refund_plan',{...ctx(80),saleId:id(83)},database).remainingCash,2400);
+  assert.equal(command('snapshot',{...ctx(80),transactionIds:[]},database).stocks[0].quantity,'4.125000');
+  assert.equal(Number(sql(`select expected_cash from public.cashier_shifts where id='${correctionShift.shiftId}';`,database).trim()),12400);
   const restoredRefund=command('partial_refund_plan',{...ctx(70),saleId:id(72)},database);
   assert.equal(restoredRefund.remainingCash,1600);assert.equal(restoredRefund.lines[0].remainingQuantity,'0.5');
   assert.equal(command('partial_refund_history',{...ctx(70),saleId:id(72)},database).rows[0].amount,1600);
@@ -198,13 +217,19 @@ try {
   assert.equal(command('snapshot',{...ctx(70),transactionIds:[]},database).stocks[0].quantity,'4.250000');
   command('close_shift',{...ctx(70),deviceId:id(71),shiftId:nextRefundShift.shiftId,countedCash:400},database);
   assert.equal(Number(sql(`select expected_cash from public.cashier_shifts where id='${nextRefundShift.shiftId}';`,database).trim()),400);
+  const resumedCorrectionShift=command('open_shift',{...ctx(80),deviceId:id(81),openingCash:5000},database);
+  command('partial_refund_sale',{...replacementRefund,refundId:id(87),shiftId:resumedCorrectionShift.shiftId,correctsCorrectionId:undefined,expectedRefundVersion:3,expectedAmount:2400,reference:'TEST restored remaining corrected refund',items:[{lineIndex:0,quantity:'0.75',returnedQuantity:'0',disposition:'not_returned'}]},database);
+  command('close_shift',{...ctx(80),deviceId:id(81),shiftId:resumedCorrectionShift.shiftId,countedCash:2600},database);
+  assert.equal(Number(sql(`select expected_cash from public.cashier_shifts where id='${resumedCorrectionShift.shiftId}';`,database).trim()),2600);
+  assert.throws(()=>sql(`update public.sale_refund_corrections set amount=1 where id='${id(85)}';`,database),/History is immutable/);
+  assert.throws(()=>sql(`delete from app_private.refund_correction_replacements where correction_id='${id(85)}';`,database,'supabase_admin'),/History is immutable/);
   assert.throws(()=>sql(`update app_private.partial_refund_lines set amount=1 where refund_id='${id(74)}';`,database,'supabase_admin'),/History is immutable/);
   assert.throws(()=>sql(`delete from app_private.delivery_reversals where id='${id(65)}';`,database,'supabase_admin'),/History is immutable/);
   assert.throws(()=>sql(`update app_private.delivery_inspection_lines set rejected=0 where inspection_id='${id(44)}';`,database,'supabase_admin'),/History is immutable/);
   assert.throws(()=>sql(`update public.sales set total=1 where id='${id(9)}';`,database),/History is immutable/);
   assert.equal(Number(sql(`select count(*) from public.branch_inventory i where i.organization_id='${id(2)}' and i.quantity<>(select sum(m.quantity) from public.inventory_movements m where m.organization_id=i.organization_id and m.branch_id=i.branch_id and m.product_id=i.product_id and m.batch_id is not distinct from i.batch_id);`,database).trim()),0);
   console.log(
-    `Restore drill passed: ${tables.length} table content fingerprints, partial-refund cash/stock and remaining allocations, immutable delivery reversal and movement lineage, correctly reopened order and linked corrected receipt, safe original retries and post-restore corrected-hold release, rejected deliveries and supplier claims, replacement receiving, purchase-cost evidence, independent counts, original sale/payment/refund, zero duplicate effects and zero ledger/projection differences. Disposable CI dump only; production cloud backup not certified.`,
+    `Restore drill passed: ${tables.length} table content fingerprints, corrected-refund recovered cash, linked replacement, post-restore remaining refund, partial-refund cash/stock and remaining allocations, immutable delivery reversal and movement lineage, correctly reopened order and linked corrected receipt, safe original retries and post-restore corrected-hold release, rejected deliveries and supplier claims, replacement receiving, purchase-cost evidence, independent counts, original sale/payment/refund, zero duplicate effects and zero ledger/projection differences. Disposable CI dump only; production cloud backup not certified.`,
   );
 } finally {
   run(["dropdb", "-U", "postgres", database]);

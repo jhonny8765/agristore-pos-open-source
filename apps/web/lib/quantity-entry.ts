@@ -32,9 +32,9 @@ export function kiloUnit(product: Product) {
     : undefined;
 }
 
-export function quantityFromDisplay(raw: string, grams: boolean) {
+export function quantityFromDisplay(raw: string, thousandth: boolean) {
   const value = enteredQuantity(raw);
-  return canonicalQuantity(value, grams ? "0.001" : "1");
+  return canonicalQuantity(value, thousandth ? "0.001" : "1");
 }
 
 export function pesoBudget(rawPesos: string): number {

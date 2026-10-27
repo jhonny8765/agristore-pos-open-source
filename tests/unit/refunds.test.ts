@@ -15,3 +15,9 @@ describe("original-price partial refunds",()=>{
  it("can allocate zero cash on a tiny portion without losing the final centavo",()=>{const l={...line,lineTotal:1,quantity:"3",factor:"1",remainingQuantity:"3"};expect(refundAllocation(l,"1")).toBe(0);expect(refundAllocation({...l,refundedQuantity:"1",remainingQuantity:"2"},"2")).toBe(1);});
  it("retains exact integer centavos near the safe numeric limit",()=>{const l={...line,lineTotal:9007199254740990,quantity:"1",remainingQuantity:"1"};expect(refundAllocation(l,"0.5")).toBe(4503599627370495);});
 });
+
+import {correctionCashCentavos} from "@agristore/domain";
+describe("full recovered cash input",()=>{
+ it.each([["0",0],["365.00",36500],["0.01",1],["90071992547409.91",9007199254740991]])("converts %s without losing a centavo",(s,n)=>expect(correctionCashCentavos(String(s))).toBe(n));
+ it.each(["", "NaN", "-1", "1e2", "1.001", "90071992547409.92"])("rejects unsafe cash %s",s=>expect(()=>correctionCashCentavos(s)).toThrow());
+});

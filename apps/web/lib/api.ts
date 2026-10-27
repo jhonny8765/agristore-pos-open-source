@@ -176,8 +176,9 @@ export async function salesPage(
 ) {
   let query = client
     .from("sales")
-    .select("*,sale_reversals(id),sale_partial_refunds(id)")
+    .select("*,sale_reversals(id),sale_partial_refunds(id),sale_refund_corrections(id)")
     .limit(1,{referencedTable:"sale_partial_refunds"})
+    .limit(1,{referencedTable:"sale_refund_corrections"})
     .eq("organization_id", org)
     .eq("branch_id", branch)
     .order("occurred_at", { ascending: false })

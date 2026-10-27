@@ -34,7 +34,7 @@ export function productSetup(form: FormData): ProductSetup {
     unitName = value(form, "unit");
   if (!name || !sku || !unitName)
     throw new Error("Enter the product name, SKU and selling unit name.");
-  if (!["kg", "liter", "piece"].includes(baseUnit))
+  if (!["kg", "liter", "meter", "piece"].includes(baseUnit))
     throw new Error("Choose the stock measurement.");
   const factor = canonicalQuantity(value(form, "factor"), "1");
   if (baseUnit === "piece" && !new Decimal(factor).isInteger())
@@ -58,7 +58,7 @@ export function productSetup(form: FormData): ProductSetup {
         "The main unit already uses the stock measurement. Add only one price for it.",
       );
     const retailName =
-      baseUnit === "kg" ? "Kilo" : baseUnit === "liter" ? "Liter" : "Piece";
+      baseUnit === "kg" ? "Kilo" : baseUnit === "liter" ? "Liter" : baseUnit === "meter" ? "Meter" : "Piece";
     if (unitName.toLowerCase() === retailName.toLowerCase())
       throw new Error(`Give the pack a different name from ${retailName}.`);
     units.push({

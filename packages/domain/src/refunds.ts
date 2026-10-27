@@ -4,6 +4,15 @@ const Exact=Decimal.clone({precision:80,rounding:Decimal.ROUND_HALF_UP});
 export interface PartialRefundLine extends SaleItem {lineIndex:number;baseUnit:string;saleableAllowed:boolean;refundedQuantity:string;remainingQuantity:string;refundedAmount:number}
 export interface PartialRefundPlan {saleId:string;receipt:string;version:number;total:number;refundedCash:number;remainingCash:number;fullyRefunded:boolean;lines:PartialRefundLine[]}
 export interface PartialRefundItem {lineIndex:number;quantity:string;returnedQuantity:string;disposition:"resalable"|"hold"|"mixed"|"not_returned";resalableQuantity?:string}
+export interface RefundHistoryRow {id:string;kind:"full"|"partial";amount:number;reference:string;reason:string;created_at:string;evidenceComplete:boolean;lines:(SaleItem&{lineIndex:number;returnedQuantity:string|null;saleableQuantity:string|null;heldQuantity:string|null;amount:number})[];correction:{id:string;reference:string;reason:string;created_at:string;amount:number;replacementId:string|null}|null;correctsCorrectionId:string|null}
+export interface RefundHistory {rows:RefundHistoryRow[];next:{at:string;id:string;kind:"full"|"partial"}|null}
+export interface RefundCorrectionPlan {refundId:string;refundKind:"full"|"partial";saleId:string;eligible:boolean;reasons:string[];ledgerRevision:string;refundVersion:number;cashToRestore:number;effects:{product_id:string;batch_id:string|null;product_name:string;base_unit:string;saleable_to_remove:string;held_to_cancel:string;book_before:string;book_after:string}[]}
+export function correctionCashCentavos(pesos:string){
+ if(!/^\d{1,14}(?:\.\d{1,2})?$/.test(pesos))throw new Error("Enter the full cash amount in pesos, with at most two decimal places.");
+ const amount=new Exact(pesos).times(100);
+ if(amount.gt(Number.MAX_SAFE_INTEGER))throw new Error("Cash amount is too large.");
+ return amount.toNumber();
+}
 export function refundAllocation(line:PartialRefundLine,quantity:string){
   const q=exactQuantity(quantity);
   if(q.lte(0)||q.gt(line.remainingQuantity))throw new Error("Refund quantity exceeds the original unrefunded quantity.");

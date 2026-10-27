@@ -2527,3 +2527,7 @@ td small {
 
 .partial-refund-control .approval-form { width: 100%; max-width: 100%; }
 .partial-refund-control .button { max-width: 100%; white-space: normal; }
+
+.refund-correction { margin-top: 12px; padding: 12px; border: 1px solid var(--line); min-width: 0; }
+.refund-correction .field input { width: 100%; min-width: 0; }
+.refund-correction > .button { margin-top: 8px; }

@@ -69,6 +69,7 @@ describe("online inventory operation recovery", () => {
     expect(await pendingOperations(target)).toHaveLength(0);
   });
   it.each([
+      {action:"correct_refund",data:{saleId:uuid(9),refundId:uuid(7),refundKind:"partial",shiftId:uuid(8),expectedLedgerRevision:"9007199254740993",expectedRefundVersion:1,cashRestoredCentavos:15000,reference:"TEST correction",reason:"TEST original cash recovered",cashConfirmed:true,goodsConfirmed:true,queuesConfirmed:true},idField:"correctionId"},
       {action:"partial_refund_sale",data:{saleId:uuid(9),shiftId:uuid(8),expectedRefundVersion:2,expectedAmount:34,reference:"TEST refund",reason:"TEST original cash",physicalConfirmed:true,items:[{lineIndex:0,quantity:"0.1",returnedQuantity:"0",disposition:"not_returned"}]},idField:"refundId"},
       {action:"reverse_delivery",data:{receiptId:uuid(9),expectedLedgerRevision:"9007199254740993",expectedOrderVersion:3,reference:"TEST signed correction",reason:"TEST owner verified actual goods",physicalConfirmed:true,queuesConfirmed:true},idField:"reversalId"},
       {action:"create_purchase_order",data:{supplierId:uuid(9),reference:"TEST-PO",reason:"TEST order",items:[{lineId:uuid(8),productId:uuid(7),unitId:uuid(6),quantity:"10"}]},idField:"purchaseOrderId"},

@@ -188,3 +188,13 @@ describe("stable checkout line drafts", () => {
     expect(Object.values(useCart.getState().drafts)[0].draft).toBe("0.5");
   });
 });
+
+it("prices millilitre drafts against exact litres, and length against fractional metres",()=>{
+ const liquid={...product,baseUnit:"liter",units:[{...product.units[1],name:"Liter",factor:"1",price:8000}]};
+ const item=makeItem(liquid,liquid.units[0].id,"0.25",null);
+ expect(draftLineTotal(item,{draft:"250",display:"ml"})).toBe(2000);
+ expect(draftLineTotal(item,{draft:"0.25",display:"liter"})).toBe(2000);
+ expect(draftLineTotal(item,{draft:"250",display:"liter"})).toBeNull();
+ const rope={...liquid,baseUnit:"meter",units:[{...liquid.units[0],name:"Meter",price:2000}]};
+ expect(makeItem(rope,rope.units[0].id,enteredQuantity("1/4"),null).lineTotal).toBe(500);
+});

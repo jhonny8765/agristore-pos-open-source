@@ -1,4 +1,5 @@
 export const retainedTables=[
+ 'sale_refund_corrections','app_private.refund_correction_replacements',
  'sale_partial_refunds','app_private.partial_refund_lines','app_private.delivery_reversals',
  'suppliers','purchase_receipts','product_batches','app_private.purchase_orders','app_private.purchase_order_lines','app_private.purchase_order_events','app_private.delivery_inspections','app_private.delivery_inspection_lines','app_private.supplier_claim_events',
  'app_private.loss_cost_evidence',
