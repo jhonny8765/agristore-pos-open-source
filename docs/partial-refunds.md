@@ -25,7 +25,7 @@ Viewing **Partial refund → Check remaining quantities** works online even with
 6. Choose the physical disposition below. For a split return, enter its saleable portion.
 7. Enter a **Partial refund reference** identifying the signed return/refund record.
 
-Every quantity uses the **original sale unit**, printed beside the field. Each line also shows its recorded conversion. For a sale in kilos, one quarter kilo is `0.25`; half a kilo is `0.5`. For a sale in 50 kg sacks, 10 kg is `0.2` sack and 250 g is `0.005` sack. Do not type kilograms into a sack field. Packet/piece stock must remain whole pieces. Quantities support up to six decimal places and exact base-stock conversion.
+Every saved quantity uses the **original sale unit**. Meter/liter products now have explicit entry-unit selectors, including **ml** for liquids. Choose the entry unit first, then check its recorded original-unit and stock equivalent. Each line shows the original conversion. For a sale in kilos, one quarter kilo is `0.25`; half a kilo is `0.5`. For a sale in 50 kg sacks, 10 kg is `0.2` sack and 250 g is `0.005` sack. Do not type kilograms into a sack field. Packet/piece stock must remain whole pieces. Quantities support up to six decimal places and exact base-stock conversion.
 
 | Actual returned goods | Choose | Stock effect |
 |---|---|---|
@@ -91,3 +91,5 @@ Reconcile the actual drawer at shift closure: opening float plus recorded net sa
 A new refund cannot be used later just to add goods from an already refunded quantity. If goods arrive after their cash refund, preserve that refund reference and use the owner's physical reconciliation procedure; do not issue cash twice or invent another sale. Exchanges, discretionary price-only credits, reversing a mistakenly issued refund and automated tax/accounting treatment remain separate workflows.
 
 Before real use, rehearse with actual staff and a checked scale/drawer. Software checks do not certify cash handover, physical truth, cashier-PC endurance or the real backup/pilot gates.
+
+For rope, ml, mixed measured returns and corrected replacements, follow the [measured refund examples](measured-units.md#refunds-and-corrected-deliveries-in-meters-or-ml). Full-refund physical entry supports the same switches but still refunds the entire original cash amount.

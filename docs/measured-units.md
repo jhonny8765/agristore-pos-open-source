@@ -75,3 +75,39 @@ The **entry unit** controls what you type. The **Recorded** line shows exactly w
 - The app refuses amounts that cannot be represented exactly with its six-decimal stock precision. It never rounds a physical quantity to make a pack conversion fit. For example, some ml fractions cannot be stored exactly as fractions of a three-liter selling unit: configure/use a one-liter unit instead.
 - Keep the original saved request when a response is lost. In **Sync center**, retry the original request; do not enter the same delivery or transfer again. Export a recovery file when required and keep it private.
 - Choose the correct lot and verify the actual roll/container factor. A printed bottle size does not automatically authorize selling an opened fraction of a sealed piece product.
+
+## Refunds and corrected deliveries in meters or ml
+
+### Selected-quantity cash refunds
+
+1. Open **Sales & receipts**, find the original confirmed receipt and choose **Partial refund → Check remaining quantities**. The owner needs their own open shift in the receipt's branch, a clear basket and no unresolved saved records before saving a new refund.
+2. For rope, select **meter** beside **Refund quantity**. For liquid measured in liters, select **ml** or **liter**. The app shows the exact equivalent in the original receipt unit; the original paid price controls cash.
+3. Enter the **financial refund quantity**, then the actual **physical returned quantity**. They can differ: a cash refund does not prove the customer brought the goods back. Enter zero when nothing returned.
+4. Choose **Inspected and saleable**, **Hold separately**, **Split between saleable and held**, or **No goods returned**. For a split, choose the entry unit beside the saleable portion and enter only inspected saleable goods. The rest of the physical return stays held.
+5. Check **Recorded** under every field. Leave unrelated refund lines blank or zero. Invalid measured quantities block review; they are not silently skipped. Whole pieces stay whole, and the app refuses conversions that would require rounding stock.
+6. Enter the refund reference, choose **Review partial refund**, and check the cash, saleable addition and held amounts. Authorize only after checking actual cash and goods. Give the confirmed cash once after the saved result.
+
+Example: a receipt sold one meter from a documented 100 m roll priced at ₱1,500/roll, plus one 500 ml container priced at ₱45. Original paid cash is ₱60. Refunding **0.25 meter + 125 ml** pays **₱15** from those original prices. If only 0.2 meter and 100 ml returned, with 0.15 meter and 40 ml fit to sell, only **0.15 meter + 0.04 liter** enter saleable stock. The other **0.05 meter + 0.06 liter** stay held. Financial quantities with no corresponding physical return do not add stock.
+
+If an original receipt pack unit cannot represent the requested portion exactly, stop and use owner reconciliation. Switching the displayed entry unit does not change the original saved conversion. Do not edit that conversion or round the refund quantity; configure suitable measured units for future sales.
+
+**Full refund** refunds the whole original paid amount. Its physical-return and mixed-saleable fields also accept meters/ml, but smaller physical quantities do not reduce that full cash refund. Use **Partial refund** when only selected quantities should be refunded financially.
+
+### Correct a mistaken saved refund
+
+1. Follow the [owner refund-correction procedure](refund-corrections.md). Account for all original refund cash and goods; only an eligible, untouched refund can be undone.
+2. The correction recovers the full original cash amount, removes only that refund's saleable stock additions and cancels its untouched held quantities. It preserves the original receipt and refund.
+3. Choose **Prepare corrected refund**. Prefilled quantities start in the original receipt unit. Choose meter/ml beside each field before editing; switching keeps the physical amount unchanged.
+4. Set the correct financial and physical quantities, review again and save the linked replacement once. If no goods should enter stock, enter physical zero and choose **No goods returned**.
+
+In the example above, undoing the mistaken ₱15 refund restores ₱15 to the correcting drawer and reverses its exact measured goods. A linked replacement for **0.125 meter + 50 ml**, with no goods returned, refunds **₱6.38** and adds no stock. With a ₱100 opening float and no other activity, the drawer is **₱153.62**. The last centavo follows the original paid-line allocation; never override it by changing a physical quantity.
+
+### Correct a mistaken saved delivery
+
+1. Close/synchronize branch shifts and follow the [delivery-reversal procedure](delivery-reversals.md). An owner checks the complete proposed reversal and actual goods. Later stock, count, held-goods or supplier activity can block automatic reversal.
+2. Reverse the eligible original inspection once. This removes its original saleable effect, cancels original held goods and restores the appropriate unreceived order quantities. It does not pay cash, issue supplier credit or physically return goods.
+3. Choose **Prepare corrected delivery**. The original quantities are prefilled in the recorded delivery unit. Change each field's entry-unit selector to meter/ml when needed; the amount is converted, not reinterpreted.
+4. Enter the actual document, accepted, held and rejected quantities separately, then review all recorded equivalents and save the linked correction once.
+5. Example: a corrected liquid inspection of document **200 ml**, accepted **125 ml**, held **25 ml**, rejected **50 ml** adds **0.125 liter** saleable and **0.025 liter** held. Rejected goods do not enter stock. From an otherwise unreceived three-liter order, the unreceived balance is **2.85 liters**.
+
+If any save loses its response, keep the original request in **Sync center** and retry it. Recovery files preserve original receipt-unit quantities, correction links and request IDs. Do not create another refund or delivery to replace an uncertain save, and do not hand out cash again merely because a retry succeeds.

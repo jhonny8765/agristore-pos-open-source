@@ -87,3 +87,5 @@ An already reversed row may appear before the interrupted request has been ackno
 Order totals count only effective inspections. Stock reconciliation includes signed purchase and hold corrections, and historical held balances include their cancellation events. **Export loaded inspections (CSV)** retains original quantities plus `record_state`, reversal details and correction IDs. Reversed rows are historical evidence: do not sum their original accepted/held quantities as active stock. The CSV still contains only loaded rows.
 
 Before real use, rehearse an untouched reversal, a blocked later-sale case and a linked correction with actual staff. These controls rely on truthful physical verification and accounted-for cashier PCs; software tests do not certify physical stock or replace the branch pilot and real backup/PC-restart checks.
+
+For meter/ml corrections, prefilled quantities start in the original delivery unit. Change each entry-unit selector before editing and check every recorded equivalent. See the [measured delivery example](measured-units.md#refunds-and-corrected-deliveries-in-meters-or-ml). Delivery reversal/correction does not create cash payments.
