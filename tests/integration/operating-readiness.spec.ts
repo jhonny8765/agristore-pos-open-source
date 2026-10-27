@@ -30,7 +30,11 @@ test("closed-shift offline reload retains the downloaded branch and receipts wit
  await page.getByLabel("Cash counted in drawer (₱)",{exact:true}).fill("1");
  await page.getByRole("button",{name:"Reconcile & close shift",exact:true}).click();
  await expect(page.getByText("No cashier shift is open. Open one from Checkout.",{exact:true})).toBeVisible();
- await page.waitForFunction(()=>!!navigator.serviceWorker.controller);
+ // Initial installation deliberately does not claim a running checkout tab.
+ // Wait for the cache, then reopen online so the next navigation is controlled.
+ await page.evaluate(()=>navigator.serviceWorker.ready.then(()=>true));
+ await page.reload();
+ await expect.poll(()=>page.evaluate(()=>!!navigator.serviceWorker.controller)).toBe(true);
  await context.setOffline(true);await page.reload();
  const picker=page.getByRole("combobox",{name:"Current branch",exact:true});
  await expect(picker).toHaveValue(a.branchId);await expect(picker).toBeDisabled();
