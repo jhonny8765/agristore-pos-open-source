@@ -89,7 +89,7 @@ export function StockControls({db, organizationId, branchId, actorId, products, 
         <Button disabled={disabled || !online || !products.length}>Submit stock issue</Button>
       </form>
     </section>
-    <section className="panel">
+    <section className="panel rejected-stock-issues">
       <h2>Rejected stock issues</h2>
       <p>Original requests and owner decisions remain here. A rejection changes no stock or cash and does not resolve a missing-stock investigation. Submit a new correct request when needed.</p>
       {!!data?.rejected?.length?<div className="table-wrap history-table stock-control-table" role="region" aria-label="Rejected stock issues" tabIndex={0}><table><thead><tr><th scope="col">Original request</th><th scope="col" className="numeric">Quantity</th><th scope="col">Owner rejection</th></tr></thead><tbody>{data.rejected.map(s=><tr key={String(s.decision_id)}><td><strong>{label(s)}</strong><small>{String(s.category).replaceAll("_"," ")} · {String(s.disposition).replaceAll("_"," ")}</small><p className="stock-evidence">{String(s.reason)}</p><small>Request: {String(s.id)}</small></td><td className="numeric" data-label="Original quantity: ">{stockMeasurement(s.quantity,stockControlIdentity(products,s).baseUnit||"base units")}</td><td><strong>Rejected · no stock change</strong><p className="stock-evidence">{String(s.rejection_reason)}</p><small>{String(s.decided_name??"Recorded owner")} · {new Date(String(s.rejected_at)).toLocaleString("en-PH",{timeZone:"Asia/Manila"})}</small><small>Decision: {String(s.decision_id)}</small></td></tr>)}</tbody></table></div>:<p>No rejected requests loaded.</p>}

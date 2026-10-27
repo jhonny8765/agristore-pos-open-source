@@ -53,6 +53,7 @@ test("server stock details retain ml outcomes and documentary cost forms when th
  await login(page,a,"Inventory");expect(catalogResponses).toBeGreaterThan(0);await expect(page.getByRole("heading",{name:"1 catalog products",exact:true})).toBeVisible();await expect(held(page)).toContainText("TEST measured liquid");await expect(held(page)).toContainText("0.25 liter (250 ml)");
  await(await outcome(page,"125","dispose")).getByRole("button",{name:"Record outcome",exact:true}).click();await expect(held(page)).toContainText("0.125 liter (125 ml)");expect(await qty(a,a.liquidId)).toBe(9.75);
  const report=await countCommand<LossReport>(a.owner,"stock_loss_report",a.ctx);expect(report.rows[0].purchase_units?.find(u=>u.id===a.liquidUnit)?.factor).toBe("0.500000");await page.getByRole("button",{name:"Overview",exact:true}).click();await cost(page,a,report.rows[0].loss_key,a.liquidUnit,"25","₱6.25");await expect(page.getByText("Documented-cost loss subtotal: ₱6.25",{exact:true})).toBeVisible();expect(await qty(a,a.liquidId)).toBe(9.75);await ledger(a);
+ await page.unrouteAll({behavior:"wait"});
 });
 
 test("two owner windows cannot dispose the same held volume or overwrite each other's purchase cost",async({page,browser})=>{

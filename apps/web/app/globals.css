@@ -1459,6 +1459,7 @@ form > .button {
 .stock-control-table :is(th, td).numeric { width: 12%; }
 .stock-control-table .approval-form { width: 100%; }
 .stock-control-table .button { white-space: normal; }
+.rejected-stock-issues > .button { max-width: 100%; white-space: normal; }
 .followup-actions { display: grid; gap: 12px; justify-items: start; }
 .followup-actions > .approval-form { min-width: 0; }
 .followup-filter { max-width: 32rem; margin-block: 16px; }
