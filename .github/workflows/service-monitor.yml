@@ -25,9 +25,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - name: Check website and database without business credentials
+      - name: Check selected availability scope without business credentials
         env:
           POS_MONITOR_URL: ${{ vars.POS_MONITOR_URL }}
+          POS_MONITOR_MODE: ${{ vars.POS_MONITOR_MODE }}
+          POS_MONITOR_PUBLISHABLE_KEY: ${{ vars.POS_MONITOR_PUBLISHABLE_KEY }}
         run: node scripts/service-monitor.mjs
   notification-test:
     name: TEST email delivery - intentional failure, no store outage

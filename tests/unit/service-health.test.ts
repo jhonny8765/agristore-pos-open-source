@@ -31,3 +31,18 @@ describe("cloud availability monitor rejects false healthy pages",()=>{
   const request=vi.fn(async()=>make()),wait=vi.fn(async()=>{});expect(await probeService("https://example.invalid",{request,wait})).toEqual({ok:false,attempts:3});expect(request).toHaveBeenCalledTimes(3);expect(wait).toHaveBeenCalledTimes(2);
  });
 });
+
+
+describe("database-only monitoring preserves protected staging access",()=>{
+ it("uses only the anonymous read-only RPC and labels scope separately",async()=>{
+  const request=vi.fn(async()=>Response.json(true)),wait=vi.fn(async()=>{});
+  expect(await probeService("https://example.invalid",{mode:"database",publishableKey:"sb_publishable_TEST",request,wait})).toEqual({ok:true,attempts:1});
+  expect(request.mock.calls[0] as unknown).toMatchObject(["https://example.invalid/rest/v1/rpc/agri_service_health",{method:"POST",body:"{}",redirect:"error",cache:"no-store",headers:{apikey:"sb_publishable_TEST"}}]);
+ });
+ it.each(["","sb_secret_PRIVATE","legacy-privileged-JWT"])("rejects missing or potentially privileged key %s without making a request",async(publishableKey)=>{
+  const request=vi.fn();await expect(probeService("https://example.invalid",{mode:"database",publishableKey,request})).rejects.toThrow();expect(request).not.toHaveBeenCalled();
+ });
+ it("rejects a normal website response as proof that the database probe ran",async()=>{
+  const request=vi.fn(async()=>Response.json(healthy()));expect(await probeService("https://example.invalid",{mode:"database",publishableKey:"sb_publishable_TEST",request,wait:async()=>{}})).toEqual({ok:false,attempts:3});
+ });
+});
