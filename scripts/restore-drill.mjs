@@ -158,6 +158,11 @@ const measuredRopeDamage={...ctx(140),issueId:id(145),productId:id(94),batchId:n
 const measuredRopeLossKey='movement:'+sql(`select id from public.inventory_movements where source_id='${id(145)}' and kind='loss';`).trim();
 const measuredDamageCosts=[{...ctx(140),lossKey:'held:'+id(144),costEvidenceId:id(146),expectedCostId:null,unitId:id(97),unitCostCentavos:'2500',zeroCostConfirmed:false,reference:'TEST supplier cost per 500 ml container',reason:'TEST documented container cost'},{...ctx(140),lossKey:measuredRopeLossKey,costEvidenceId:id(147),expectedCostId:null,unitId:id(96),unitCostCentavos:'100000',zeroCostConfirmed:false,reference:'TEST supplier cost per 100 meter roll',reason:'TEST documented roll purchase cost'}];for(const body of measuredDamageCosts)command('record_loss_cost',body);
 const measuredDamageCostCorrection={...measuredDamageCosts[0],costEvidenceId:id(148),expectedCostId:id(146),unitCostCentavos:'3000',reference:'TEST corrected 500 ml container invoice',reason:'TEST corrected documented cost retains earlier evidence'};command('record_loss_cost',measuredDamageCostCorrection);
+// Pending and rejected mistakes retain their evidence without stock effects.
+const restoredPendingMistake={...ctx(140),issueId:id(151),productId:id(94),batchId:null,quantity:'0.25',category:'damage',disposition:'write_off',reason:'TEST mistaken duplicate quarter meter request'};
+const restoredRejectedMistake={...ctx(140),issueId:id(152),productId:id(95),batchId:null,quantity:'0.05',category:'damage',disposition:'hold',reason:'TEST mistaken 50 ml request'};
+command('record_stock_issue',restoredPendingMistake);command('record_stock_issue',restoredRejectedMistake);
+const restoredRejection={...ctx(140),issueId:id(152),decisionId:id(153),reason:'TEST original owner checked this was a mistaken request'};command('reject_stock_issue',restoredRejection);
 // Compare retained content, not just row counts or one projected balance.
 const fingerprints = target => lastJSON(sql(fingerprintSQL(id(2)),target));
 const original = fingerprints("postgres");
@@ -246,6 +251,7 @@ try {
   assert.equal(restoredFollowup.assigned_user_id,id(16));assert.equal(restoredFollowup.due_on,assignment.dueOn);
   assert.equal(restoredFollowup.progress_note,progress.reason);assert.equal(restoredFollowup.follow_up_version,2);
   // Idempotent retries and reads must not change immutable financial/stock rows.
+  assert.equal(command('reject_stock_issue',restoredRejection,database).duplicate,true);
   const retried = fingerprints(database);
   for (const table of tables.filter(t=>t!=="devices")) assert.deepEqual(retried[table],original[table],`Restored retry changed ${table}`);
   const controls = command("stock_controls",ctx(),database);
@@ -300,6 +306,18 @@ try {
   assert.equal(measuredDamageReport.rows.find(r=>r.product_id===id(95)).purchase_units.find(u=>u.id===id(97)).factor,'0.500000');
   assert.equal(Number(sql(`select quantity from public.branch_inventory where branch_id='${id(140)}' and product_id='${id(95)}';`,database).trim()),9.85);
   assert.equal(Number(sql(`select remaining from public.stock_holds where id='${measuredDamageHold}';`,database).trim()),0);
+  const restoredIssueControls=command('stock_controls',ctx(140),database);
+  assert.equal(restoredIssueControls.issues.find(r=>r.id===id(151)).quantity,'0.250000');
+  const retainedRejection=restoredIssueControls.rejected.find(r=>r.id===id(152));
+  assert.equal(retainedRejection.quantity,'0.050000');assert.equal(retainedRejection.base_unit,'liter');
+  assert.equal(retainedRejection.decision_id,id(153));assert.equal(retainedRejection.rejection_reason,restoredRejection.reason);assert.ok(retainedRejection.decided_name);
+  const afterRestoreRejection={...ctx(140),issueId:id(151),decisionId:id(154),reason:'TEST owner checked pending mistake after restoring evidence'};
+  command('reject_stock_issue',afterRestoreRejection,database);assert.equal(command('reject_stock_issue',afterRestoreRejection,database).duplicate,true);
+  assert.throws(()=>command('approve_stock_issue',{...ctx(140),issueId:id(151),reason:'TEST refused approval of rejected request'},database),/request was rejected/);
+  assert.throws(()=>sql(`delete from public.stock_issues where id='${id(152)}';`,database),/History is immutable/);
+  assert.equal(Number(sql(`select quantity from public.branch_inventory where branch_id='${id(140)}' and product_id='${id(94)}';`,database).trim()),99.75);
+  assert.equal(Number(sql(`select quantity from public.branch_inventory where branch_id='${id(140)}' and product_id='${id(95)}';`,database).trim()),9.85);
+  assert.equal(command('stock_loss_report',ctx(140),database).totals.documentedLossCentavos,'1000');
   assert.throws(()=>sql(`update public.sale_refund_corrections set amount=1 where id='${id(85)}';`,database),/History is immutable/);
   assert.throws(()=>sql(`delete from app_private.refund_correction_replacements where correction_id='${id(85)}';`,database,'supabase_admin'),/History is immutable/);
   command('approve_count',{...ctx(91),countId:id(109),reason:'TEST independent owner verified 245 ml after restoration'},database);

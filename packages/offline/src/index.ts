@@ -393,7 +393,7 @@ export async function readLocalSales(db: PosDatabase, scope: RecoveryScope, limi
 export const recoveryOperationIds: Record<string, string> = {
   receive_stock: "receiptId", dispatch_transfer: "transferId", receive_transfer: "receiptId",
   submit_count: "countId", refund_sale: "refundId", partial_refund_sale: "refundId", correct_refund: "correctionId", record_stock_issue: "issueId",
-  disposition_hold: "dispositionId", write_off_transfer: "receiptId",
+  disposition_hold: "dispositionId", write_off_transfer: "receiptId", reject_stock_issue:"decisionId",
   start_blind_count: "countId", record_blind_count: "observationId",
   approve_count: "countId", cancel_blind_count: "countId", create_branch: "newBranchId",
   assign_stock_exception: "followUpId", note_stock_exception: "followUpId",

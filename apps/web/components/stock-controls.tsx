@@ -12,7 +12,8 @@ import { Button } from "./ui/button";
 import { StockFollowUps } from "./stock-followups";
 
 type Row = Record<string,unknown>;
-interface Controls { openExceptions: number; exceptions: Row[]; holds: Row[]; issues: Row[]; holdCount?:number; issueCount?:number; holdsNext?:{at:string;id:string}|null; issuesNext?:{at:string;id:string}|null }
+type Cursor={at:string;id:string}|null;
+interface Controls { openExceptions: number; exceptions: Row[]; holds: Row[]; issues: Row[]; holdCount?:number; issueCount?:number; holdsNext?:Cursor; issuesNext?:Cursor; rejected?:Row[]; rejectedCount?:number; rejectedNext?:Cursor }
 const val = (form: FormData, name: string) => String(form.get(name) ?? "").trim();
 export function StockControls({db, organizationId, branchId, actorId, products, owner, canAssign, online, disabled, revision, execute}: {
   db: PosDatabase; organizationId: string; branchId: string; actorId: string; products: Product[];
@@ -30,12 +31,12 @@ export function StockControls({db, organizationId, branchId, actorId, products, 
   const generation = useRef(0);
   const invalidate = useCallback(() => { generation.current++; },[]);
   const context = {organizationId,branchId};
-  const load = useCallback(async (mode:"reset"|"holds"|"issues"="reset",previous?:Controls) => {
+  const load = useCallback(async (mode:"reset"|"holds"|"issues"|"rejected"="reset",previous?:Controls) => {
     const request = ++generation.current;
     setLoading(true);
     try {
-      const next = await command<Controls>("stock_controls",{organizationId,branchId,...(mode==="holds"?{holdCursor:previous?.holdsNext}:{}),...(mode==="issues"?{issueCursor:previous?.issuesNext}:{})});
-      if (request === generation.current) { setData(old=>mode==="reset"?next:{...next,holds:mode==="holds"?[...old?.holds??[],...next.holds]:old?.holds??next.holds,holdsNext:mode==="holds"?next.holdsNext:old?.holdsNext,issues:mode==="issues"?[...old?.issues??[],...next.issues]:old?.issues??next.issues,issuesNext:mode==="issues"?next.issuesNext:old?.issuesNext}); setError(""); }
+      const next = await command<Controls>("stock_controls",{organizationId,branchId,...(mode==="holds"?{holdCursor:previous?.holdsNext}:{}),...(mode==="issues"?{issueCursor:previous?.issuesNext}:{}),...(mode==="rejected"?{rejectedCursor:previous?.rejectedNext}:{})});
+      if (request === generation.current) { setData(old=>mode==="reset"?next:{...next,holds:mode==="holds"?[...old?.holds??[],...next.holds]:old?.holds??next.holds,holdsNext:mode==="holds"?next.holdsNext:old?.holdsNext,issues:mode==="issues"?[...old?.issues??[],...next.issues]:old?.issues??next.issues,issuesNext:mode==="issues"?next.issuesNext:old?.issuesNext,rejected:mode==="rejected"?[...old?.rejected??[],...next.rejected??[]]:old?.rejected??next.rejected,rejectedNext:mode==="rejected"?next.rejectedNext:old?.rejectedNext}); setError(""); }
     } catch(e) { if(request === generation.current) setError(e instanceof Error ? e.message : "Could not refresh stock controls. Retry online."); }
     finally { if(request===generation.current)setLoading(false); }
   },[organizationId,branchId]);
@@ -50,7 +51,7 @@ export function StockControls({db, organizationId, branchId, actorId, products, 
   async function save(action: string, body: Row, idField?: string) {
     if (idField) await onlineOperation(db,actorId,action,{...context,...body},idField);
     else await command(action,{...context,...body});
-    setFeedback("Stock control recorded. The original history is retained.");
+    setFeedback(action==="reject_stock_issue"?"Request rejected and retained in history. Stock, cash and loss values are unchanged.":"Stock control recorded. The original history is retained.");
     await load();
   }
   return <>
@@ -73,7 +74,7 @@ export function StockControls({db, organizationId, branchId, actorId, products, 
     <section className="panel">
       <h2>Damage, spillage and other stock issues</h2>
       <p>Choose the actual measurement and check its recorded stock equivalent. Nothing changes saleable stock until the owner approves. Do not use this to erase an unexplained count difference.</p>
-      {!!data?.issues.length && <div className="table-wrap history-table stock-control-table" role="region" aria-label="Stock issues awaiting approval" tabIndex={0}><table role="table"><thead><tr><th scope="col">Issue</th><th scope="col" className="numeric">Quantity</th><th scope="col">Approval</th></tr></thead><tbody>{data.issues.map(s => <tr key={String(s.id)}><td>{label(s)}<small>{String(s.category)} · {String(s.disposition)} · {String(s.reason)}</small></td><td className="numeric" data-label="Quantity: ">{stockMeasurement(s.quantity,stockControlIdentity(products,s).baseUnit||"base units")}</td><td>{owner && <ApprovalForm action="Approve stock issue" label="Approval notes" description="This deducts the recorded quantity from saleable stock and retains a separate movement. Held goods remain separately tracked." confirmLabel="Approve issue" disabled={disabled || !online} onConfirm={reason => execute(() => save("approve_stock_issue",{issueId:s.id,reason}))} />}</td></tr>)}</tbody></table></div>}
+      {!!data?.issues.length && <div className="table-wrap history-table stock-control-table" role="region" aria-label="Stock issues awaiting approval" tabIndex={0}><table role="table"><thead><tr><th scope="col">Issue</th><th scope="col" className="numeric">Quantity</th><th scope="col">Owner decision</th></tr></thead><tbody>{data.issues.map(s => <tr key={String(s.id)}><td>{label(s)}<small>{String(s.category)} · {String(s.disposition)} · {String(s.reason)}</small></td><td className="numeric" data-label="Quantity: ">{stockMeasurement(s.quantity,stockControlIdentity(products,s).baseUnit||"base units")}</td><td>{owner && <div className="followup-actions"><ApprovalForm action="Approve stock issue" label="Approval notes" description="This deducts the recorded quantity from saleable stock and retains a separate movement. Held goods remain separately tracked." confirmLabel="Approve issue" disabled={disabled || !online} onConfirm={reason => execute(() => save("approve_stock_issue",{issueId:s.id,reason}))} /><ApprovalForm action="Reject stock issue" label="Rejection notes" description="Reject only a mistaken pending request. Record what was checked and why. This keeps the original request and your decision without changing stock, cash, loss values or an investigation." confirmLabel="Reject request" disabled={disabled || !online} onConfirm={reason=>execute(()=>save("reject_stock_issue",{issueId:s.id,reason},"decisionId"))}/></div>}</td></tr>)}</tbody></table></div>}
       {data&&<><p>{data.issues.length} of {data.issueCount??data.issues.length} pending stock issues loaded, oldest first. {data.issuesNext?"More pending issues are available.":"End of pending stock issues."}</p><Button variant="outline" disabled={disabled||!online||loading||!data.issuesNext} onClick={()=>void load("issues",data)}>Load more stock issues</Button></>}
       <form className="form-grid" aria-label="Record stock issue" onSubmit={e => {
         e.preventDefault(); const form = e.currentTarget; const f = new FormData(form);
@@ -87,6 +88,12 @@ export function StockControls({db, organizationId, branchId, actorId, products, 
         <label className="field"><span>Issue evidence / reason</span><input name="reason" required minLength={3} maxLength={1000} /></label>
         <Button disabled={disabled || !online || !products.length}>Submit stock issue</Button>
       </form>
+    </section>
+    <section className="panel">
+      <h2>Rejected stock issues</h2>
+      <p>Original requests and owner decisions remain here. A rejection changes no stock or cash and does not resolve a missing-stock investigation. Submit a new correct request when needed.</p>
+      {!!data?.rejected?.length?<div className="table-wrap history-table stock-control-table" role="region" aria-label="Rejected stock issues" tabIndex={0}><table><thead><tr><th scope="col">Original request</th><th scope="col" className="numeric">Quantity</th><th scope="col">Owner rejection</th></tr></thead><tbody>{data.rejected.map(s=><tr key={String(s.decision_id)}><td><strong>{label(s)}</strong><small>{String(s.category).replaceAll("_"," ")} · {String(s.disposition).replaceAll("_"," ")}</small><p className="stock-evidence">{String(s.reason)}</p><small>Request: {String(s.id)}</small></td><td className="numeric" data-label="Original quantity: ">{stockMeasurement(s.quantity,stockControlIdentity(products,s).baseUnit||"base units")}</td><td><strong>Rejected · no stock change</strong><p className="stock-evidence">{String(s.rejection_reason)}</p><small>{String(s.decided_name??"Recorded owner")} · {new Date(String(s.rejected_at)).toLocaleString("en-PH",{timeZone:"Asia/Manila"})}</small><small>Decision: {String(s.decision_id)}</small></td></tr>)}</tbody></table></div>:<p>No rejected requests loaded.</p>}
+      {data&&<><p>{data.rejected?.length??0} of {data.rejectedCount??0} rejected requests loaded, newest decisions first. {data.rejectedNext?"More rejected requests are available.":"End of rejected requests."} Refresh stock controls for the latest decisions.</p><Button variant="outline" disabled={disabled||!online||loading||!data.rejectedNext} onClick={()=>void load("rejected",data)}>Load more rejected requests</Button></>}
     </section>
   </>;
 }
