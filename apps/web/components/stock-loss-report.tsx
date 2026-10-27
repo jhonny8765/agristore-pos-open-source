@@ -63,7 +63,10 @@ export function StockLossReport({ db, organizationId, branchId, branchName, acto
   const load = useCallback(async (mode: "reset" | "losses" | "reconciliation" = "reset", previous?: LossReport) => {
     const request = ++generation.current; setLoading(true);
     try {
-      const result = await command<LossReport>("stock_loss_report", { organizationId, branchId, ...filters, ...(previous ? { asOf: previous.asOf } : {}), ...(mode === "losses" ? { cursor: previous?.next } : {}), ...(mode === "reconciliation" ? { reconciliationCursor: previous?.reconciliationNext } : {}) });
+      // A failed filter change retains the old report. Its next page must retain
+      // that report's filters as well as its timestamp, never the failed request.
+      const applied = previous ? { fromDate: previous.fromDate, throughDate: previous.throughDate, filter: previous.filter, allBranches: previous.allBranches } : filters;
+      const result = await command<LossReport>("stock_loss_report", { organizationId, branchId, ...applied, ...(previous ? { asOf: previous.asOf } : {}), ...(mode === "losses" ? { cursor: previous?.next } : {}), ...(mode === "reconciliation" ? { reconciliationCursor: previous?.reconciliationNext } : {}) });
       if (request !== generation.current) return;
       setData(old => ({ ...result, rows: mode === "reconciliation" ? old?.rows ?? result.rows : mode === "losses" ? [...old?.rows ?? [], ...result.rows] : result.rows,
         next: mode === "reconciliation" ? old?.next ?? null : result.next,

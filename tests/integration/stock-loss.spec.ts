@@ -5,6 +5,7 @@ import { expect, test, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { countCommand, testCountStaff } from "./blind-count-fixtures";
 import type { CostHistoryRow, LossReport } from "../../apps/web/lib/stock-loss";
+import Decimal from "decimal.js";
 
 async function fixture() {
   if (process.env.AGRISTORE_LOCAL_INTEGRATION !== "1" || process.env.NEXT_PUBLIC_SUPABASE_URL !== "http://127.0.0.1:55321") throw new Error("Disposable loopback purchase-cost fixtures only");
@@ -95,4 +96,40 @@ test("a committed purchase-cost request with a lost response recovers once with 
   const history = await countCommand<{ rows: CostHistoryRow[] }>(a.owner, "loss_cost_history", { ...a.ctx, lossKey: a.lossKey }); expect(history.rows).toHaveLength(1); expect(history.rows[0].id).toBe(requestId);
   const events = await a.owner.from("audit_events").select("source_id").eq("organization_id", a.organizationId).eq("action", "record_loss_cost"); expect(events.error).toBeNull(); expect(events.data).toEqual([{ source_id: requestId }]);
   expect((await countCommand<LossReport>(a.owner, "stock_loss_report", a.ctx)).totals.documentedLossCentavos).toBe("625");
+});
+
+test("failed report filter changes cannot mix later pages or export values from another report", async ({page}) => {
+ const a=await fixture();
+ for(let n=0;n<55;n++){
+  const issueId=randomUUID();await countCommand(a.owner,"record_stock_issue",{...a.ctx,issueId,productId:a.productId,batchId:null,quantity:n<50?"0.001":"0.002",category:n<50?"damage":"supplier_return",disposition:"write_off",reason:`TEST paged removal ${n}`});
+  await countCommand(a.owner,"approve_stock_issue",{...a.ctx,issueId,reason:"TEST independently verified paged removal"});
+ }
+ let report=await countCommand<LossReport>(a.owner,"stock_loss_report",{...a.ctx,filter:"all"});const all=[...report.rows];while(report.next){report=await countCommand<LossReport>(a.owner,"stock_loss_report",{...a.ctx,filter:"all",asOf:report.asOf,cursor:report.next});all.push(...report.rows);}
+ for(const row of all)await countCommand(a.owner,"record_loss_cost",{...a.ctx,lossKey:row.loss_key,costEvidenceId:randomUUID(),expectedCostId:null,unitId:a.sackId,unitCostCentavos:"125000",reference:"TEST page invoice",reason:"TEST documentary price per 50 kg sack",zeroCostConfirmed:false});
+ await login(page,a);const region=page.getByRole("region",{name:"Purchase-cost stock-loss rows",exact:true});await expect(region.getByRole("row")).toHaveCount(51);await expect(page.getByText("Documented-cost loss subtotal: ₱7.75",{exact:true})).toBeVisible();
+ let failed=false;const pages:Record<string,unknown>[]=[];
+ await page.route("**/rest/v1/rpc/agri_command",async route=>{const r=route.request().postDataJSON();if(r.action==="stock_loss_report"&&r.data.filter==="other_removal"&&!failed){failed=true;await route.abort("failed");}else{if(r.action==="stock_loss_report"&&r.data.cursor)pages.push(r.data);await route.continue();}});
+ await page.getByLabel("Removal category",{exact:true}).selectOption("other_removal");await page.getByRole("button",{name:"Apply loss-report filters",exact:true}).click();await expect(page.getByRole("alert")).toContainText("Previously loaded report rows are retained");
+ await page.getByRole("button",{name:"Load more loss rows",exact:true}).click();await expect(region.getByRole("row")).toHaveCount(52);expect(pages).toHaveLength(1);expect(pages[0].filter).toBe("loss");await expect(region).not.toContainText("supplier return");await expect(page.getByText("Documented-cost loss subtotal: ₱7.75",{exact:true})).toBeVisible();
+ const download=page.waitForEvent("download");await page.getByRole("button",{name:"Export loaded loss rows (CSV)",exact:true}).click();const csv=await readFile((await(await download).path())!,"utf8");expect(csv.split("\r\n")).toHaveLength(52);expect(csv).not.toContain('"other_removal"');for(const row of all.filter(r=>r.bucket==="loss"))expect(csv).toContain(`"${row.loss_key}"`);
+ await page.getByRole("button",{name:"Apply loss-report filters",exact:true}).click();await expect(region.getByRole("row")).toHaveCount(6);await expect(region).toContainText("supplier return");await expect(page.getByText("Documented-cost loss subtotal: ₱7.75",{exact:true})).toBeVisible();await expect(page.getByLabel("Full-range loss valuation totals")).toContainText("Other authorised removals: ₱0.25");
+ const stock=await a.owner.from("branch_inventory").select("quantity").eq("branch_id",a.branchId).eq("product_id",a.productId);expect(stock.error).toBeNull();expect(new Decimal(stock.data![0].quantity).eq("499.69")).toBe(true);
+});
+
+test("stock worklists load beyond fifty and approve or dispose the exact selected last record",async({page})=>{
+ const a=await fixture();const pending:string[]=[];
+ for(let n=0;n<51;n++){
+  const issueId=randomUUID();await countCommand(a.owner,"record_stock_issue",{...a.ctx,issueId,productId:a.productId,batchId:null,quantity:"0.001",category:"damage",disposition:"hold",reason:`TEST held worklist ${n}`});await countCommand(a.owner,"approve_stock_issue",{...a.ctx,issueId,reason:"TEST owner checked held worklist goods"});
+  const id=randomUUID();pending.push(id);await countCommand(a.owner,"record_stock_issue",{...a.ctx,issueId:id,productId:a.productId,batchId:null,quantity:"0.002",category:"damage",disposition:"write_off",reason:`TEST pending worklist ${n}`});
+ }
+ await login(page,a);await page.getByRole("button",{name:"Inventory",exact:true}).click();
+ const held=page.getByRole("region",{name:"Held stock",exact:true}),issues=page.getByRole("region",{name:"Stock issues awaiting approval",exact:true});await expect(held.getByRole("row")).toHaveCount(51);await expect(issues.getByRole("row")).toHaveCount(51);
+ await expect(page.getByText(/50 of 51 open held-goods records loaded/)).toBeVisible();await page.getByRole("button",{name:"Load more held goods",exact:true}).click();await expect(held.getByRole("row")).toHaveCount(52);await expect(issues.getByRole("row")).toHaveCount(51);await expect(page.getByRole("button",{name:"Load more held goods",exact:true})).toBeDisabled();
+ let lost=false;await page.route("**/rest/v1/rpc/agri_command",async route=>{const r=route.request().postDataJSON();if(r.action==="stock_controls"&&r.data.issueCursor&&!lost){lost=true;await route.abort("failed");}else await route.continue();});
+ await page.getByRole("button",{name:"Load more stock issues",exact:true}).click();await expect(page.getByRole("alert")).toBeVisible();await expect(held.getByRole("row")).toHaveCount(52);await expect(issues.getByRole("row")).toHaveCount(51);await page.getByRole("button",{name:"Load more stock issues",exact:true}).click();await expect(issues.getByRole("row")).toHaveCount(52);
+ const last=issues.getByRole("row").filter({hasText:"TEST pending worklist 50"});await last.getByRole("button",{name:"Approve stock issue",exact:true}).click();await last.getByLabel("Approval notes",{exact:true}).fill("TEST owner checked the final pending quantity");await last.getByRole("button",{name:"Approve issue",exact:true}).click();await expect(last).toHaveCount(0);
+ await page.getByRole("button",{name:"Load more held goods",exact:true}).click();const finalHold=held.getByRole("row").filter({hasText:"TEST held worklist 50"});await finalHold.getByRole("button",{name:"Record held-goods outcome",exact:true}).click();await finalHold.getByLabel("Quantity from held stock (base units)",{exact:true}).fill("0.001");await finalHold.getByLabel("Inspection / disposition reason",{exact:true}).fill("TEST physically disposed exactly the last held gram");await finalHold.getByRole("button",{name:"Record outcome",exact:true}).click();await expect(finalHold).toHaveCount(0);
+ const report=await countCommand<LossReport>(a.owner,"stock_loss_report",a.ctx);expect(report.totals.lossRows).toBe(3);for(const row of report.rows)await countCommand(a.owner,"record_loss_cost",{...a.ctx,lossKey:row.loss_key,costEvidenceId:randomUUID(),expectedCostId:null,unitId:a.sackId,unitCostCentavos:"125000",zeroCostConfirmed:false,reference:"TEST worklist invoice",reason:"TEST price per actual 50 kg sack"});
+ expect((await countCommand<LossReport>(a.owner,"stock_loss_report",a.ctx)).totals.documentedLossCentavos).toBe("633");const stocks=await a.owner.from("branch_inventory").select("quantity").eq("branch_id",a.branchId).eq("product_id",a.productId);expect(stocks.error).toBeNull();expect(new Decimal(stocks.data![0].quantity).eq("499.697")).toBe(true);
+ const movements=await a.owner.from("inventory_movements").select("quantity").eq("branch_id",a.branchId).eq("product_id",a.productId);expect(movements.error).toBeNull();expect(movements.data!.reduce((sum,m)=>sum.plus(m.quantity),new Decimal(0)).eq("499.697")).toBe(true);expect(pending).toHaveLength(51);
 });

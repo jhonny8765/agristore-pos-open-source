@@ -250,6 +250,9 @@ try {
   for (const table of tables.filter(t=>t!=="devices")) assert.deepEqual(retried[table],original[table],`Restored retry changed ${table}`);
   const controls = command("stock_controls",ctx(),database);
   assert.equal(controls.holds.reduce((sum,h)=>sum+Number(h.remaining),0),1);
+  assert.equal(controls.holdCount,controls.holds.length);
+  assert.equal(controls.issueCount,controls.issues.length);
+  assert.equal(controls.holdsNext,null);assert.equal(controls.issuesNext,null);
   const destination = command("snapshot",{...ctx(6),transactionIds:[]},database);
   assert.equal(destination.stocks[0].quantity,"2.250000");
   assert.equal(sql(`select (quantity-received_quantity-held_quantity-lost_quantity)::text from public.stock_transfers where id='${id(12)}';`,database).trim(),"0.750000");
