@@ -56,3 +56,5 @@ Standard GitHub-hosted runner minutes for public repositories are free under [Gi
 Use synthetic data in tests and bug reports. Do not post receipts, customer/staff records, passwords, tokens or recovery exports. See [SECURITY.md](SECURITY.md) for vulnerability reporting and [docs/stock-counts.md](docs/stock-counts.md) for the stock-count procedure. Schema changes require migrations, permission/isolation checks, recovery checks and the complete verification workflow before release.
 
 Business logos and photographs from private deployments are deliberately excluded. The included AgriStore SVG mark and its rendered installation icons belong to this source edition. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+See [measured lengths, liquids and pieces](docs/measured-units.md) for rope meters, the liter/ml checkout switch, real pack conversions and sealed items. See [correcting a mistaken refund](docs/refund-corrections.md) for full recovered-cash checks, untouched stock safeguards, preserved originals and linked replacements.
