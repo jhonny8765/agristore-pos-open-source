@@ -774,7 +774,7 @@ export function StoreApp() {
     const { filename, data } = currentRecoveryDownload;
     return <section className="recovery-download" aria-label="Prepared recovery download">
       <h3>Check your recovery download</h3>
-      <p>Part {data.archive.part} of {data.archive.parts} · {data.archive.recordCount} records in this file · {data.archive.totalRecords} in this export.</p>
+      <p>Part {data.archive.part} of {data.archive.parts} · {data.archive.recordCount} sale records · {data.pendingOperations.length} stock / owner requests in this file. This export covers {data.archive.totalRecords} sale records.</p>
       <p className="recovery-filename">{filename}</p>
       <p>Check your browser Downloads or chosen folder. The app cannot confirm the file was saved. If it is missing or blocked, download this same part again.</p>
       <Button variant="outline" disabled={busy} onClick={() => void run(async () => {

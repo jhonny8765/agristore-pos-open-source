@@ -88,6 +88,7 @@ test("a committed purchase-cost request with a lost response recovers once with 
   await expect(page.getByRole("button", { name: "Retry original request", exact: true })).toBeVisible();
   const download = page.waitForEvent("download"); await page.getByRole("button", { name: "Export recovery file", exact: true }).click();
   const bytes = await readFile((await (await download).path())!); const archive = JSON.parse(bytes.toString());
+  await expect(page.getByRole("region", { name: "Prepared recovery download" })).toContainText("0 sale records · 1 stock / owner requests in this file");
   expect(archive.pendingOperations).toHaveLength(1); const requestId = archive.pendingOperations[0].data.costEvidenceId;
   const context = await browser.newContext();
   try {
