@@ -1,4 +1,5 @@
 "use client";
+import { MeasuredQuantity } from "./measured-quantity";
 import { PartialRefundControl } from "./partial-refund";
 
 /* WORLD: A cooperative store's orderly stock book: forest ink, warm paper, ruled tables, precise figures.
@@ -209,6 +210,8 @@ function download(name: string, data: unknown) {
 }
 
 export function StoreApp() {
+  const [dispatchStock,setDispatchStock]=useState("");
+  const [quickUnit,setQuickUnit]=useState("");
   const [partialRefundSaleId,setPartialRefundSaleId]=useState<string>();
   const [localHistoryLimit, setLocalHistoryLimit] = useState(50);
   const [hasOlderLocal, setHasOlderLocal] = useState(false);
@@ -868,6 +871,11 @@ export function StoreApp() {
       </>
     );
   };
+  const dispatchOptions=useMemo(()=>products.flatMap(p=>p.batches.length?p.batches.map(b=>`${p.id}:${b.id}`):[`${p.id}:none`]),[products]);
+  const dispatchSelection=dispatchOptions.includes(dispatchStock)?dispatchStock:dispatchOptions[0]??"";
+  const dispatchProduct=products.find(p=>p.id===dispatchSelection.split(":")[0]);
+  const quickProduct=products.find(p=>p.units.some(u=>u.id===quickUnit))??products.find(p=>p.units.length);
+  const quickSellingUnit=quickProduct?.units.find(u=>u.id===quickUnit)??quickProduct?.units[0];
   const stockQuantity = (row: Row, quantity: string) =>
     `${new Decimal(quantity).toFixed()} ${historicalStock(products, row).baseUnit || "(base unit unavailable)"}`;
   const branchName = (id: unknown) =>
@@ -2122,7 +2130,7 @@ export function StoreApp() {
                           },
                           "receiptId",
                         );
-                        form.reset();
+                        form.reset();setQuickUnit("");
                         notify("Delivery recorded.");
                       }, true, true);
                     }}
@@ -2141,7 +2149,7 @@ export function StoreApp() {
                       <input name="reference" required />
                     </Field>
                     <Field label="Product and unit">
-                      <select name="unit" required>
+                      <select name="unit" aria-label="Product and unit" required value={quickSellingUnit?.id??""} onChange={e=>setQuickUnit(e.target.value)}>
                         {products.flatMap((p) =>
                           p.units.map((u) => (
                             <option key={u.id} value={u.id}>
@@ -2151,17 +2159,10 @@ export function StoreApp() {
                         )}
                       </select>
                     </Field>
-                    <Field label="Quantity received">
-                      <input
-                        name="quantity"
-                        type="number"
-                        min="0.000001"
-                        step="0.000001"
-                        required
-                      />
-                    </Field>
+                    <MeasuredQuantity key={`quick:${branchId}:${quickSellingUnit?.id}`} label="Quantity received" name="quantity" measurement={{baseUnit:quickProduct?.baseUnit??"base units",unitName:quickSellingUnit?.name??"selected unit",factor:quickSellingUnit?.factor??"1"}} positive disabled={busy||!online||!quickSellingUnit}/>
+
                     <p className="muted">Enter only accepted, saleable goods above. Keep rejected or damaged goods separate.</p>
-                    <Field label="Quantity on supplier document (optional)"><input name="documentQuantity" type="number" min="0" step="0.000001" /></Field>
+                    <MeasuredQuantity key={`document:${branchId}:${quickSellingUnit?.id}`} label="Quantity on supplier document (optional)" entryLabel="Quantity on supplier document" name="documentQuantity" measurement={{baseUnit:quickProduct?.baseUnit??"base units",unitName:quickSellingUnit?.name??"selected unit",factor:quickSellingUnit?.factor??"1"}} required={false} disabled={busy||!online||!quickSellingUnit}/>
                     <Field label="Delivery shortage / rejection notes"><input name="deliveryNotes" maxLength={1000} placeholder="Required when accepted goods differ from the supplier document" /></Field>
                     <div className="form-grid">
                       <Field label="Lot / batch">
@@ -2443,14 +2444,14 @@ export function StoreApp() {
                                     },true,true)
                                   }
                                 >
-                                  <Field label="Saleable quantity actually received (base units)"><input name="quantity" type="number" min="0" step="0.000001" max={outstandingTransfer(t)} required /></Field>
-                                  <Field label="Damaged / held quantity received (base units)"><input name="heldQuantity" type="number" min="0" step="0.000001" defaultValue="0" required /></Field>
+                                  <MeasuredQuantity label="Saleable quantity actually received (base units)" entryLabel="Saleable quantity actually received" name="quantity" measurement={{baseUnit:historicalStock(products,t).baseUnit||"base units",unitName:historicalStock(products,t).baseUnit||"base units",factor:"1"}} max={outstandingTransfer(t)}/>
+                                  <MeasuredQuantity label="Damaged / held quantity received (base units)" entryLabel="Damaged / held quantity received" name="heldQuantity" measurement={{baseUnit:historicalStock(products,t).baseUnit||"base units",unitName:historicalStock(products,t).baseUnit||"base units",factor:"1"}} initial="0" max={outstandingTransfer(t)}/>
                                 </ApprovalForm>
                               )}
                             {isOwner && t.state === "in_transit" && t.destination_branch_id === branchId && <ApprovalForm action="Record missing transfer goods" label="Investigation evidence / loss reason" description={`This closes an investigated shortage from the outstanding ${outstandingTransfer(t)} base units. It does not deduct the source stock again or add destination stock.`} confirmLabel="Record transfer loss" disabled={!online || busy || practice} onConfirm={(reason,f) => run(async () => {
                               await onlineOperation(db,member.userId,"write_off_transfer",{...context(),transferId:t.id,quantity:inputValue(f,"missingQuantity"),reason},"receiptId");
                               notify("Missing transfer goods recorded separately. Review and resolve the investigation in Inventory.");
-                            },true,true)}><Field label="Missing transfer quantity (base units)"><input name="missingQuantity" type="number" min="0.000001" max={outstandingTransfer(t)} step="0.000001" required /></Field></ApprovalForm>}
+                            },true,true)}><MeasuredQuantity label="Missing transfer quantity (base units)" entryLabel="Missing transfer quantity" name="missingQuantity" measurement={{baseUnit:historicalStock(products,t).baseUnit||"base units",unitName:historicalStock(products,t).baseUnit||"base units",factor:"1"}} positive max={outstandingTransfer(t)}/></ApprovalForm>}
                           </td>
                         </tr>
                       )),
@@ -2483,7 +2484,7 @@ export function StoreApp() {
                         },
                         "transferId",
                       );
-                      form.reset();
+                      form.reset();setDispatchStock("");
                       if (lease) await sync();
                       notify(
                         "Stock dispatched. It remains in transit until received.",
@@ -2491,9 +2492,9 @@ export function StoreApp() {
                     });
                   }}
                 >
-                  <StockSelect products={products} />
+                  <StockSelect products={products} value={dispatchSelection} onChange={setDispatchStock}/>
                   <Field label="Destination branch">
-                    <select name="destination" required>
+                    <select name="destination" aria-label="Destination branch" required>
                       {branchList
                         .filter((b) => b.id !== branchId)
                         .map((b) => (
@@ -2503,15 +2504,8 @@ export function StoreApp() {
                         ))}
                     </select>
                   </Field>
-                  <Field label="Quantity in base units (kg / liter / meter / piece)">
-                    <input
-                      name="quantity"
-                      type="number"
-                      min="0.000001"
-                      step="0.000001"
-                      required
-                    />
-                  </Field>
+                  <MeasuredQuantity key={`dispatch:${branchId}:${dispatchSelection}`} label="Quantity in base units (kg / liter / meter / piece)" entryLabel="Dispatch quantity" name="quantity" measurement={{baseUnit:dispatchProduct?.baseUnit??"base units",unitName:dispatchProduct?.baseUnit??"base units",factor:"1"}} positive disabled={busy||!online||!dispatchProduct}/>
+
                   <Button
                     disabled={
                       !online ||
@@ -3554,10 +3548,10 @@ export function StoreApp() {
   );
 }
 
-function StockSelect({ products }: { products: Product[] }) {
+function StockSelect({ products,onChange,value }: { products: Product[];onChange?:(value:string)=>void;value?:string }) {
   return (
     <Field label="Product / batch">
-      <select name="stock" required>
+      <select name="stock" aria-label="Product / batch" required value={value} onChange={e=>onChange?.(e.target.value)}>
         {products.flatMap((p) =>
           p.batches.length
             ? p.batches.map((b) => (

@@ -8,6 +8,7 @@ import type {PosDatabase} from '@agristore/offline';
 import {command} from '../lib/api';
 import {onlineOperation} from '../lib/operations';
 import {canApproveCount,countPage,countState,countLabel,type BlindCount} from '../lib/blind-counts';
+import {MeasuredQuantity} from './measured-quantity';
 import {ApprovalForm} from './approval-form';
 import {Button} from './ui/button';
 
@@ -53,7 +54,7 @@ export function BlindCounts({db,organizationId,branchId,actorId,products,owner,o
    void execute(async()=>{await save('start_blind_count',{productId,batchId:batchId==='none'?null:batchId,reason:field(f,'reason')},'countId');form.reset();});
   }}>
    <h3>Start a blind count</h3>
-   <label className="field"><span>Product / batch</span><select name="stock" required disabled={blocked}>
+   <label className="field"><span>Product / batch</span><select name="stock" aria-label="Product / batch" required disabled={blocked}>
     {products.flatMap(p=>p.batches.length ? p.batches.map(b=><option key={b.id} value={`${p.id}:${b.id}`}>{p.name} · {b.lot} ({p.baseUnit})</option>) : [<option key={p.id} value={`${p.id}:none`}>{p.name} ({p.baseUnit})</option>])}
    </select></label>
    <label className="field"><span>Counting scope / reason</span><input name="reason" required minLength={3} maxLength={1000} disabled={blocked} placeholder="For example, end-of-day loose feeds" /></label>
@@ -82,7 +83,7 @@ export function BlindCounts({db,organizationId,branchId,actorId,products,owner,o
       void execute(async()=>{await save('record_blind_count',{countId:row.id,stage:first?'first':'recount',quantity:field(f,'quantity'),notes:field(f,'notes')},'observationId');});
      }}>
       <p>{first?'Record your physical count without consulting expected stock.':'Count independently before asking the first counter for their result. Your entry is sealed before comparisons are revealed.'}</p>
-      <label className="field"><span>{first?'First physical quantity':'Independent recount quantity'} ({unit})</span><input name="quantity" type="number" min="0" step={unit==='piece'?'1':'0.000001'} required disabled={blocked} /></label>
+      <MeasuredQuantity key={`${row.id}:${unit}:${first}`} label={`${first?"First physical quantity":"Independent recount quantity"} (${unit})`} entryLabel={first?"First physical quantity":"Independent recount quantity"} name="quantity" measurement={{baseUnit:unit,unitName:unit,factor:"1"}} disabled={blocked}/>
       <label className="field"><span>{first?'First count notes':'Independent recount notes'}</span><textarea name="notes" required minLength={3} maxLength={1000} disabled={blocked} /></label>
       <Button disabled={blocked}>{first?'Seal first count':'Seal independent recount'}</Button>
      </form>}

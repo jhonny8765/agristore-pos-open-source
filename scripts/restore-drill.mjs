@@ -116,6 +116,22 @@ assert.equal(correctionCheck.eligible,true);
 const refundCorrection={...ctx(80),saleId:id(83),refundId:id(84),refundKind:'partial',shiftId:correctionShift.shiftId,correctionId:id(85),expectedLedgerRevision:correctionCheck.ledgerRevision,expectedRefundVersion:correctionCheck.refundVersion,cashRestoredCentavos:1600,reference:'TEST retained recovered refund cash',reason:'TEST mistaken physical quantities and full cash recovery verified',cashConfirmed:true,goodsConfirmed:true,queuesConfirmed:true};command('correct_refund',refundCorrection);
 const replacementRefund={...mistakenRefund,refundId:id(86),expectedRefundVersion:2,expectedAmount:800,correctsCorrectionId:id(85),reference:'TEST linked replacement refund',items:[{lineIndex:0,quantity:'0.25',returnedQuantity:'0.125',disposition:'resalable'}]};command('partial_refund_sale',replacementRefund);
 command('close_shift',{...ctx(80),deviceId:id(81),shiftId:correctionShift.shiftId,countedCash:12400});
+// Meter / liter purchasing and pending transfer/count evidence survives the same full restore.
+sql(`insert into public.branches(id,organization_id,name,code) values('${id(90)}','${id(2)}','TEST measured source','RESTORE5'),('${id(91)}','${id(2)}','TEST measured destination','RESTORE6');
+insert into public.staff_memberships(organization_id,user_id,branch_id,role,name) values('${id(2)}','${id(16)}','${id(91)}','stock_staff','TEST measured first counter'),('${id(2)}','${id(17)}','${id(91)}','stock_staff','TEST measured recounter');
+insert into public.products(id,organization_id,name,sku,base_unit) values('${id(94)}','${id(2)}','TEST restored rope','RESTORE-METER','meter'),('${id(95)}','${id(2)}','TEST restored liquid','RESTORE-LITER','liter');
+insert into public.product_units(id,organization_id,product_id,name,factor) values('${id(96)}','${id(2)}','${id(94)}','100 meter roll',100),('${id(97)}','${id(2)}','${id(95)}','500 ml container',0.5);
+insert into public.unit_prices(organization_id,unit_id,version,price,cost) values('${id(2)}','${id(96)}',1,150000,100000),('${id(2)}','${id(97)}',1,4500,2500);`);
+const measuredOrder={...ctx(90),purchaseOrderId:id(100),supplierId:id(40),reference:'TEST measured restore order',reason:'TEST documented meter and container conversion',items:[{lineId:id(101),productId:id(94),unitId:id(96),quantity:'2'},{lineId:id(102),productId:id(95),unitId:id(97),quantity:'6'}]};
+const measuredApproval={...ctx(90),purchaseOrderId:id(100),orderEventId:id(103),expectedState:'pending',outcome:'approve',reason:'TEST owner checked real pack sizes'};
+const measuredInspection={...ctx(90),purchaseOrderId:id(100),supplierId:id(40),receiptId:id(104),reference:'TEST measured restore inspection',reason:'TEST physical saleable, held and rejected goods',items:[{orderLineId:id(101),productId:id(94),unitId:id(96),documentQuantity:'1.25',accepted:'1',held:'0.125',rejected:'0.125',reason:'TEST actual rope lengths'},{orderLineId:id(102),productId:id(95),unitId:id(97),documentQuantity:'6',accepted:'4',held:'1',rejected:'1',reason:'TEST actual liquid measurements'}]};
+for(const [action,body] of [['create_purchase_order',measuredOrder],['purchase_order_event',measuredApproval],['inspect_delivery',measuredInspection]])command(action,body);
+const measuredDispatches=[{...ctx(90),transferId:id(105),productId:id(94),batchId:null,quantity:'12.75',destinationBranchId:id(91)},{...ctx(90),transferId:id(106),productId:id(95),batchId:null,quantity:'0.375',destinationBranchId:id(91)}];
+const measuredReceipts=[{...ctx(91),transferId:id(105),receiptId:id(107),quantity:'12.25',heldQuantity:'0.25',reason:'TEST quarter meter remains in transit'},{...ctx(91),transferId:id(106),receiptId:id(108),quantity:'0.25',heldQuantity:'0.1',reason:'TEST 25 ml remain in transit'}];
+for(const body of measuredDispatches)command('dispatch_transfer',body);for(const body of measuredReceipts)command('receive_transfer',body);
+const measuredCount={...ctx(91),countId:id(109),productId:id(95),batchId:null,reason:'TEST blind measured 245 ml after closed shifts'};command('start_blind_count',measuredCount,'postgres',16);
+const measuredObservations=[{...ctx(91),countId:id(109),stage:'first',observationId:id(110),quantity:'0.245',notes:'TEST actual 245 ml first measurement'},{...ctx(91),countId:id(109),stage:'recount',observationId:id(111),quantity:'0.245',notes:'TEST independent 0.245 liter measurement'}];
+command('record_blind_count',measuredObservations[0],'postgres',16);command('record_blind_count',measuredObservations[1],'postgres',17);
 // Compare retained content, not just row counts or one projected balance.
 const fingerprints = target => lastJSON(sql(fingerprintSQL(id(2)),target));
 const original = fingerprints("postgres");
@@ -163,6 +179,13 @@ try {
   assert.equal(command('partial_refund_plan',{...ctx(80),saleId:id(83)},database).remainingCash,2400);
   assert.equal(command('snapshot',{...ctx(80),transactionIds:[]},database).stocks[0].quantity,'4.125000');
   assert.equal(Number(sql(`select expected_cash from public.cashier_shifts where id='${correctionShift.shiftId}';`,database).trim()),12400);
+  for(const [action,body] of [['create_purchase_order',measuredOrder],['purchase_order_event',measuredApproval],['inspect_delivery',measuredInspection],...measuredDispatches.map(b=>['dispatch_transfer',b]),...measuredReceipts.map(b=>['receive_transfer',b])])assert.equal(command(action,body,database).duplicate,true);
+  command('record_blind_count',measuredObservations[0],database,16);command('record_blind_count',measuredObservations[1],database,17);
+  assert.equal(Number(sql(`select quantity from public.branch_inventory where branch_id='${id(90)}' and product_id='${id(94)}';`,database).trim()),87.25);
+  assert.equal(Number(sql(`select quantity from public.branch_inventory where branch_id='${id(90)}' and product_id='${id(95)}';`,database).trim()),1.625);
+  assert.equal(Number(sql(`select quantity from public.branch_inventory where branch_id='${id(91)}' and product_id='${id(95)}';`,database).trim()),0.25);
+  assert.equal(Number(sql(`select quantity-received_quantity-held_quantity-lost_quantity from public.stock_transfers where id='${id(106)}';`,database).trim()),0.025);
+  assert.equal(command('count_workspace',ctx(91),database).rows[0].counted,'0.245000');
   const restoredRefund=command('partial_refund_plan',{...ctx(70),saleId:id(72)},database);
   assert.equal(restoredRefund.remainingCash,1600);assert.equal(restoredRefund.lines[0].remainingQuantity,'0.5');
   assert.equal(command('partial_refund_history',{...ctx(70),saleId:id(72)},database).rows[0].amount,1600);
@@ -223,13 +246,21 @@ try {
   assert.equal(Number(sql(`select expected_cash from public.cashier_shifts where id='${resumedCorrectionShift.shiftId}';`,database).trim()),2600);
   assert.throws(()=>sql(`update public.sale_refund_corrections set amount=1 where id='${id(85)}';`,database),/History is immutable/);
   assert.throws(()=>sql(`delete from app_private.refund_correction_replacements where correction_id='${id(85)}';`,database,'supabase_admin'),/History is immutable/);
+  command('approve_count',{...ctx(91),countId:id(109),reason:'TEST independent owner verified 245 ml after restoration'},database);
+  for(const [transferId,receiptId,quantity] of [[id(105),id(112),'0.25'],[id(106),id(113),'0.025']])command('write_off_transfer',{...ctx(91),transferId,receiptId,quantity,reason:'TEST owner reconciled missing goods after restoration'},database);
+  const restoredMeterCount={...ctx(91),countId:id(114),productId:id(94),batchId:null,reason:'TEST post-restore physical meter count'};command('start_blind_count',restoredMeterCount,database,16);
+  for(const [actor,stage,observationId] of [[16,'first',id(115)],[17,'recount',id(116)]])command('record_blind_count',{...ctx(91),countId:id(114),stage,observationId,quantity:'12.125',notes:'TEST independent actual meter measurement'},database,actor);
+  command('approve_count',{...ctx(91),countId:id(114),reason:'TEST third-person owner approved actual rope length'},database);
+  assert.equal(Number(sql(`select quantity from public.branch_inventory where branch_id='${id(91)}' and product_id='${id(94)}';`,database).trim()),12.125);
+  assert.equal(Number(sql(`select quantity from public.branch_inventory where branch_id='${id(91)}' and product_id='${id(95)}';`,database).trim()),0.245);
+  assert.equal(Number(sql(`select remaining from public.stock_holds where source_id='${id(108)}';`,database).trim()),0.1);
   assert.throws(()=>sql(`update app_private.partial_refund_lines set amount=1 where refund_id='${id(74)}';`,database,'supabase_admin'),/History is immutable/);
   assert.throws(()=>sql(`delete from app_private.delivery_reversals where id='${id(65)}';`,database,'supabase_admin'),/History is immutable/);
   assert.throws(()=>sql(`update app_private.delivery_inspection_lines set rejected=0 where inspection_id='${id(44)}';`,database,'supabase_admin'),/History is immutable/);
   assert.throws(()=>sql(`update public.sales set total=1 where id='${id(9)}';`,database),/History is immutable/);
   assert.equal(Number(sql(`select count(*) from public.branch_inventory i where i.organization_id='${id(2)}' and i.quantity<>(select sum(m.quantity) from public.inventory_movements m where m.organization_id=i.organization_id and m.branch_id=i.branch_id and m.product_id=i.product_id and m.batch_id is not distinct from i.batch_id);`,database).trim()),0);
   console.log(
-    `Restore drill passed: ${tables.length} table content fingerprints, corrected-refund recovered cash, linked replacement, post-restore remaining refund, partial-refund cash/stock and remaining allocations, immutable delivery reversal and movement lineage, correctly reopened order and linked corrected receipt, safe original retries and post-restore corrected-hold release, rejected deliveries and supplier claims, replacement receiving, purchase-cost evidence, independent counts, original sale/payment/refund, zero duplicate effects and zero ledger/projection differences. Disposable CI dump only; production cloud backup not certified.`,
+    `Restore drill passed: ${tables.length} table content fingerprints, measured meter/liter orders, inspections, held goods, partial transfer receipts, remaining in-transit goods and separate-person post-restore counts, corrected-refund recovered cash, linked replacement, post-restore remaining refund, partial-refund cash/stock and remaining allocations, immutable delivery reversal and movement lineage, correctly reopened order and linked corrected receipt, safe original retries and post-restore corrected-hold release, rejected deliveries and supplier claims, replacement receiving, purchase-cost evidence, independent counts, original sale/payment/refund, zero duplicate effects and zero ledger/projection differences. Disposable CI dump only; production cloud backup not certified.`,
   );
 } finally {
   run(["dropdb", "-U", "postgres", database]);

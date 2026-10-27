@@ -2531,3 +2531,8 @@ td small {
 .refund-correction { margin-top: 12px; padding: 12px; border: 1px solid var(--line); min-width: 0; }
 .refund-correction .field input { width: 100%; min-width: 0; }
 .refund-correction > .button { margin-top: 8px; }
+
+.measured-quantity { min-width: 0; }
+.measured-quantity .field { display: grid; min-width: 0; }
+.measured-quantity input, .measured-quantity select { width: 100%; min-width: 0; }
+.measured-quantity small { display: block; margin-block: 6px 10px; overflow-wrap: anywhere; }
