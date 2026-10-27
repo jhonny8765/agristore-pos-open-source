@@ -58,3 +58,5 @@ Use synthetic data in tests and bug reports. Do not post receipts, customer/staf
 Business logos and photographs from private deployments are deliberately excluded. The included AgriStore SVG mark and its rendered installation icons belong to this source edition. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 See [measured lengths, liquids and pieces](docs/measured-units.md) for rope meters, the liter/ml checkout switch, real pack conversions and sealed items. See [correcting a mistaken refund](docs/refund-corrections.md) for full recovered-cash checks, untouched stock safeguards, preserved originals and linked replacements.
+
+The [October 27 correction/unit software gate](https://github.com/jhonny8765/agristore-pos-open-source/actions/runs/40435328856) passed 219 unit tests, 56 browser scenarios (22 practice and 34 real Auth/database), 634 pgTAP assertions and a 40-table disposable dump/restore drill. Real cashier-PC storage, physical cash/goods rehearsal and production-backup/pilot sign-offs remain separate requirements.
