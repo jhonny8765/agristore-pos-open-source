@@ -52,6 +52,7 @@ import Decimal from "decimal.js";
 import { StoreBrand } from "./store-brand";
 import { ProductSetupForm } from "./product-setup-form";
 import { kiloUnit } from "../lib/quantity-entry";
+import { resumeBranch } from "../lib/resume-branch";
 import type { SaleEntry } from "../lib/cart";
 import { SaleLineEditor } from "./sale-line-editor";
 import { productStock } from "../lib/stock-display";
@@ -66,6 +67,7 @@ import {
   type Membership,
   type Product,
   type Sale,
+  type Snapshot,
 } from "@agristore/domain";
 import {
   PosDatabase,
@@ -442,9 +444,12 @@ export function StoreApp() {
         setSignedIn(true);
       } else {
         const cachedMember = await setting<Membership>(db, "membership");
+        const cachedBranches = (await setting<Branch[]>(db, "branches")) ?? [];
+        const cachedScope = await setting<Snapshot["localScope"]>(db, "snapshotScope");
         if (!current()) return;
         setMember(cachedMember);
-        setBranchList((await setting<Branch[]>(db, "branches")) ?? []);
+        setBranchList(cachedBranches);
+        setBranchId(saved?.branchId ?? resumeBranch(cachedMember, cachedBranches, cachedScope) ?? "");
         const {
           data: { session },
         } = await supabase.auth.getSession();
@@ -470,14 +475,14 @@ export function StoreApp() {
             const b = await fetchBranches(m.organizationId);
             if (!current()) return;
             setBranchList(b);
-            setBranchId(saved?.branchId ?? m.branchId ?? b[0]?.id ?? "");
+            const target = saved?.branchId ?? resumeBranch(m, b, cachedScope) ?? m.branchId ?? b[0]?.id;
+            setBranchId(target ?? "");
             await db.transaction("rw",db.settings,async()=>{
               if (!current()) return;
               await setSetting(db,"membership",m);
               await setSetting(db,"branches",b);
             });
             if (!current()) return;
-            const target = saved?.branchId ?? m.branchId ?? b[0]?.id;
             if (target)
               await applySnapshot(
                 db,
@@ -1279,6 +1284,7 @@ export function StoreApp() {
                 });
               }}
             >
+              {!branchId && <option value="" disabled>Reconnect to identify branch</option>}
               {branchList
                 .filter((b) => isOwner || b.id === member.branchId)
                 .map((b) => (
@@ -2769,14 +2775,18 @@ export function StoreApp() {
                 </div>
                 <div>
                   <h2>
-                    {practice
+                    {!branchId
+                      ? "Reconnect to identify the saved branch"
+                      : practice
                       ? "Practice records stay on this PC"
                       : pending.length
                         ? `${pending.length} sales waiting for confirmation`
                         : "Your local queue is clear"}
                   </h2>
                   <p>
-                    {practice
+                    {!branchId
+                      ? "Saved records remain on this PC. Reconnect to load your permitted branch before reviewing its queue. Do not repeat saved purchases or clear site data."
+                      : practice
                       ? "Practice mode never connects its transactions to your live business."
                       : `Last successful synchronization: ${when(lastSync)}`}
                   </p>
@@ -2877,8 +2887,8 @@ export function StoreApp() {
                 ) : (
                   <Empty
                     icon={RefreshCw}
-                    title="No local transactions yet"
-                    body="Every completed checkout remains listed here, including failed uploads."
+                    title={branchId ? "No local transactions yet" : "Saved branch is not identified"}
+                    body={branchId ? "Every completed checkout remains listed here, including failed uploads." : "Reconnect to identify this account’s downloaded branch. Existing records are retained; this empty view does not mean the PC has no saved sales."}
                   />
                 )}
                 <p className="muted">All unresolved sales and up to {localHistoryLimit} recent saved records are shown. Earlier confirmed history remains retained.</p>

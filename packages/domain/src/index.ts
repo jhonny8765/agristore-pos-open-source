@@ -131,6 +131,8 @@ export interface Snapshot {
   catalogUnchanged?: boolean;
   /** Local request fence, attached by the browser, never submitted to the server. */
   localRequestId?: string;
+  /** Browser metadata: the authorized request that produced this stock snapshot. */
+  localScope?: { organizationId: string; branchId: string };
 }
 export interface SyncAck {
   transactionId: string;

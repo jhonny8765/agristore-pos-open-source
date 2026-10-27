@@ -178,6 +178,10 @@ export async function applySnapshot(db: PosDatabase, snapshot: Snapshot, syncGua
       }
       await setSetting(db, "confirmedIds", snapshot.confirmedIds);
       await setSetting(db, "snapshotAsOf", snapshot.asOf);
+      // Keep the branch identity atomic with its stock, including after shift
+      // closure. Never infer it from a first branch or an old stock download.
+      if (snapshot.localScope) await setSetting(db, "snapshotScope", snapshot.localScope);
+      else await db.settings.delete("snapshotScope");
       if (syncGuard) await setSetting(db,"lastSync",syncGuard.syncedAt);
     },
   );
@@ -200,6 +204,7 @@ export async function clearAccountCache(db: PosDatabase) {
         "lastSync",
         "catalogVersion",
         "snapshotRequestId",
+        "snapshotScope",
       ]);
     },
   );

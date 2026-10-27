@@ -99,7 +99,9 @@ export async function requestSnapshot(db: PosDatabase | undefined, input: Record
     if (!latest.catalogUnchanged) fullCatalog = latest.products;
     catalogVersion = latest.catalogVersion;
   }
-  return {...latest!, confirmedIds:[...confirmed], products:fullCatalog ?? [], catalogUnchanged:fullCatalog === undefined, ...(localRequestId ? {localRequestId} : {})};
+  const localScope = typeof input.organizationId === "string" && typeof input.branchId === "string"
+    ? { organizationId: input.organizationId, branchId: input.branchId } : undefined;
+  return {...latest!, confirmedIds:[...confirmed], products:fullCatalog ?? [], catalogUnchanged:fullCatalog === undefined, ...(localRequestId ? {localRequestId} : {}), localScope};
 }
 export function cloudTransport(lease: Lease, db?: PosDatabase): Transport {
   const context = {

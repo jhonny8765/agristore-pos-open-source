@@ -19,6 +19,7 @@ it('batches acknowledgment IDs and combines the newest stock with an earlier ful
   expect(rpc.mock.calls[1][1]).toMatchObject({data:{catalogVersion:'2',transactionIds:ids.slice(1000)}});
   expect(result.confirmedIds).toEqual(ids);expect(result.products).toEqual([next]);expect(result.catalogUnchanged).toBe(false);
   await applySnapshot(db,result);
+  expect(await setting(db,'snapshotScope')).toEqual({organizationId:uuid(1),branchId:uuid(2)});
   expect((await db.stocks.get(`${product.id}:none`))?.quantity).toBe('498');
   expect((await db.products.get(product.id))?.name).toBe('Updated feeds');
 });
@@ -26,9 +27,11 @@ it('batches acknowledgment IDs and combines the newest stock with an earlier ful
 it('retains cached products on an unchanged catalog and removes its version on account cache reset',async()=>{
   const db=await local();await setSetting(db,'catalogVersion','1');
   vi.spyOn(supabase,'rpc').mockResolvedValue({data:{asOf:'2026-10-25T01:00:00Z',products:[],stocks:[],confirmedIds:[],catalogVersion:'1',catalogUnchanged:true},error:null,count:null,status:200,statusText:'OK'} as never);
-  await applySnapshot(db,await requestSnapshot(db,{}));
+  await applySnapshot(db,await requestSnapshot(db,{organizationId:uuid(1),branchId:uuid(2)}));
   expect(await db.products.get(product.id)).toEqual(product);
+  expect(await setting(db,'snapshotScope')).toEqual({organizationId:uuid(1),branchId:uuid(2)});
   await clearAccountCache(db);expect(await setting(db,'catalogVersion')).toBeUndefined();
+  expect(await setting(db,'snapshotScope')).toBeUndefined();
 });
 
 it('refuses a partial multi-request snapshot without replacing the saved catalog or stock',async()=>{
@@ -48,12 +51,13 @@ it('rejects an older response after a newer snapshot already confirmed the sales
  const db=await local(),one=sale(),two=sale();await saveCheckout(db,one);await saveCheckout(db,two);
  const started=deferred<void>(),old=deferred<ReturnType<typeof response>>();
  vi.spyOn(supabase,'rpc').mockImplementationOnce(()=>{started.resolve();return old.promise as never;}).mockResolvedValueOnce(response('498','Latest feeds',[one.transactionId,two.transactionId]) as never);
- const first=requestSnapshot(db,{organizationId:uuid(1),branchId:uuid(2)});await started.promise;
+ const first=requestSnapshot(db,{organizationId:uuid(1),branchId:uuid(9)});await started.promise;
  const newest=await requestSnapshot(db,{organizationId:uuid(1),branchId:uuid(2)});await applySnapshot(db,newest);
  old.resolve(response('499','Old feeds',[one.transactionId]));
  await expect(applySnapshot(db,await first)).rejects.toThrow('replaced this request');
  expect((await db.stocks.get(`${product.id}:none`))?.quantity).toBe('498');
  expect((await db.products.get(product.id))?.name).toBe('Latest feeds');
+ expect(await setting(db,'snapshotScope')).toEqual({organizationId:uuid(1),branchId:uuid(2)});
  expect((await db.sales.toArray()).every(s=>s.status==='synced')).toBe(true);
 });
 it('does not restore a signed-out account from an outstanding stock request',async()=>{
