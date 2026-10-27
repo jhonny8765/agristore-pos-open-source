@@ -109,6 +109,7 @@ import { activateReadyUpdate, findReadyUpdate } from "../lib/pwa-update";
 import { ApprovalForm } from "./approval-form";
 import { HistoryRegister } from "./history-register";
 import { StorageHealth } from "./storage-health";
+import { OperatingGuide } from "./operating-guide";
 import { StockControls } from "./stock-controls";
 import { StockLossReport } from "./stock-loss-report";
 import { PurchasingWorkspace } from "./purchasing-workspace";
@@ -2000,6 +2001,7 @@ export function StoreApp() {
                 )}
               </section>
               {!practice && member.role !== "cashier" && <StockControls key={`${member.organizationId}:${branchId}`} db={db} organizationId={member.organizationId} branchId={branchId} actorId={member.userId} products={products} owner={isOwner} canAssign={isOwner || member.role === "manager"} online={online} disabled={busy} revision={historyRevision} execute={fn => run(fn,true,true)} />}
+              <OperatingGuide key={`operating:${member.organizationId}:${branchId}:${member.userId}`} db={db} scope={{organizationId:member.organizationId,branchId,actorId:member.userId,role:member.role}} branchName={selectedBranch?.name??"Selected branch"} online={online} cached={!!registration?.active} practice={practice} disabled={busy||installingUpdate} onRefreshCatalog={()=>void run(()=>refreshCloud(true),false)} onSync={()=>setView("sync")}/>
               {isOwner && (
                 <div className="two-column">
                   <section className="panel">

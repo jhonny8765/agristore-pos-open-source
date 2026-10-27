@@ -327,6 +327,22 @@ export async function syncOnce(
         // A previous runner must not turn a sale synchronized by its successor
         // back into a retry, or write after another window has signed out.
         await requireSyncContext(db,lease,owner);
+        const access=error as {code?:string;status?:number;authenticationRequired?:boolean};
+        if(access?.authenticationRequired||access?.status===401||access?.status===403||["42501","PGRST301","PGRST302","PGRST303"].includes(access?.code??"")){
+          // Authentication can expire after authorization but before a later
+          // upload. Pause the whole batch without consuming network retries or
+          // requesting a snapshot under expired/revoked access. Earlier commits
+          // keep their original IDs and remain unconfirmed until verified.
+          await db.transaction("rw",[db.sales,db.settings,db.locks],async()=>{
+            await requireSyncContext(db,lease,owner);
+            for(const retained of eligible){
+              const current=await db.sales.get(retained.id);
+              if(!current||current.fingerprint!==retained.fingerprint||current.status==="synced"||current.status==="review_required")continue;
+              await db.sales.update(retained.id,{status:"authentication_required",error:"Sign in again as the original cashier before uploading. If access is refused, ask the owner to review it. Saved sales and original IDs are retained.",updatedAt:now});
+            }
+          });
+          return {sent};
+        }
         const attempts = s.attempts + 1;
         await db.sales.update(s.id, {
           status: attempts >= 10 ? "review_required" : "retryable",

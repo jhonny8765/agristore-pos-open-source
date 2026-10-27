@@ -1460,6 +1460,20 @@ form > .button {
 .stock-control-table .approval-form { width: 100%; }
 .stock-control-table .button { white-space: normal; }
 .rejected-stock-issues > .button { max-width: 100%; white-space: normal; }
+.operating-guide .section-heading { flex-wrap: wrap; align-items: flex-start; }
+.operating-guide .button { max-width: 100%; white-space: normal; }
+.operating-guide h3 { margin-block: 24px 12px; }
+.operating-checks { margin-block: 20px; }
+.operating-checks > div { padding-block: 14px; border-bottom: 1px solid var(--line); }
+.operating-checks dt { font-weight: 650; }
+.operating-checks dd { margin: 8px 0 0; max-width: 75ch; }
+.operating-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-block: 18px; }
+.operating-guide :is(p, dd, li, summary) { overflow-wrap: anywhere; }
+.operating-guide ol { padding-inline-start: 24px; max-width: 75ch; }
+.operating-guide li + li { margin-block-start: 10px; }
+.operating-guide details { border-top: 1px solid var(--line); padding-block: 14px; }
+.operating-guide summary { cursor: pointer; font-weight: 650; }
+.operating-guide details ol { margin-block: 14px 4px; }
 .followup-actions { display: grid; gap: 12px; justify-items: start; }
 .followup-actions > .approval-form { min-width: 0; }
 .followup-filter { max-width: 32rem; margin-block: 16px; }

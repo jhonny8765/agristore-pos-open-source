@@ -9,6 +9,7 @@ import type {
 } from "@agristore/domain";
 import { setting, setSetting, type PosDatabase, type Transport } from "@agristore/offline";
 import { recordColumns } from "./record-columns";
+import { commandError } from "./command-error";
 
 export const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL ??
@@ -38,12 +39,12 @@ export async function command<T = Record<string, unknown>>(
     throw new Error(
       "Reconnect to use this action. Completed cash sales remain on this PC.",
     );
-  const { data: result, error } = await supabase.rpc("agri_command", {
+  const { data: result, error, status } = await supabase.rpc("agri_command", {
     action,
     data,
   });
   if (error)
-    throw Object.assign(new Error(error.message), { code: error.code });
+    throw commandError(error,status);
   return result as T;
 }
 export async function memberships(): Promise<Membership[]> {
