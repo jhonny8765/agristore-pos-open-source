@@ -1590,7 +1590,7 @@ test("partial transfers, held goods and stock issues reconcile through the owner
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
     const contained=await activeHold.evaluate(row=>{
       const region=row.closest('[role="region"]')!.getBoundingClientRect();
-      return [...row.querySelectorAll('td,.approval-form,input,select')].every(el=>{
+      return [...row.querySelectorAll('td,.approval-form,input:not([type=hidden]),select')].every(el=>{
         const rect=el.getBoundingClientRect();return rect.left>=region.left-1 && rect.right<=region.right+1;
       });
     });
