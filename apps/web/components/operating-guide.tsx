@@ -9,6 +9,7 @@ export function OperatingGuide({db,scope,branchName,online,cached,practice,disab
  const [local,setLocal]=useState<LocalOperatingStatus>();const [storage,setStorage]=useState<BrowserStorageStatus>({});
  const [error,setError]=useState("");const [busy,setBusy]=useState(false);const [now,setNow]=useState(0);const [checkedAt,setCheckedAt]=useState(0);const generation=useRef(0);
  const {organizationId,branchId,actorId,role}=scope;
+ const invalidate=useCallback(()=>{generation.current++;},[]);
  const read=useCallback(async()=>{
   const request=++generation.current;setBusy(true);
   const [records,space]=await Promise.allSettled([readOperatingStatus(db,{organizationId,branchId,actorId,role}),(async()=>{if(!navigator.storage)return {};const [persistent,estimate]=await Promise.all([navigator.storage.persisted?.(),navigator.storage.estimate()]);return {persistent,...estimate};})()]);
@@ -16,7 +17,7 @@ export function OperatingGuide({db,scope,branchName,online,cached,practice,disab
   if(records.status==="fulfilled"){setLocal(records.value);setError("");}else{setLocal(undefined);setError("Local records could not be checked. Do not begin checkout until this is resolved. Keep this profile and site data, preserve recovery evidence and ask the maintainer for help.");}
   setStorage(space.status==="fulfilled"?space.value:{});const time=Date.now();setNow(time);setCheckedAt(time);setBusy(false);
  },[db,organizationId,branchId,actorId,role]);
- useEffect(()=>{void read();const timer=setInterval(()=>setNow(Date.now()),15_000);const focus=()=>void read();window.addEventListener("focus",focus);return()=>{generation.current++;clearInterval(timer);window.removeEventListener("focus",focus);};},[read,online]);
+ useEffect(()=>{void read();const timer=setInterval(()=>setNow(Date.now()),15_000);const focus=()=>void read();window.addEventListener("focus",focus);return()=>{invalidate();clearInterval(timer);window.removeEventListener("focus",focus);};},[read,online,invalidate]);
  const checks=local?operatingChecks({scope,local,storage,online,cached,practice,now}):[];
  return <section className="panel operating-guide" aria-label="PC checks and store guide">
   <div className="section-heading"><h2>PC checks & store guide</h2><Button variant="outline" disabled={busy||disabled} onClick={()=>void read()}>Refresh PC checks</Button></div>
