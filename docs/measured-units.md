@@ -156,3 +156,11 @@ If a save loses its response, use **Sync center → Retry original request**. Re
 ### Read a report when filters fail to load
 
 The snapshot, date range, branch scope and category printed below the report filters describe the loaded rows, totals and CSV. If a requested filter fails, those previous rows are kept and a notice identifies the retained snapshot. Loading more rows continues that same snapshot; it cannot add supplier returns to a loss-only page. Choose **Apply loss-report filters** again online to load the requested report. The notice clears when that report loads. CSV still exports only the loaded rows; load every matching page before using it as a complete row list.
+
+### Work from a window with an older catalog
+
+Online held/pending records carry their own product, lot and measurement details. A held liquid can still be entered in ml when its product has not reached this window's downloaded catalog. Check its name, lot, remaining amount and recorded equivalent before an owner saves the outcome. If measurement details are unavailable, refresh online before acting; the app does not guess a unit.
+
+Loss rows carry the actual configured purchase units for their product. Choose the unit on the supplier/opening-stock document, enter the cost of one such unit and check the preview. A listed conversion is not proof of a purchase price: missing documentary cost stays unvalued. Refresh the catalog before creating a new issue or sale for a product that is absent from this window.
+
+When two employees act on the same record, a balance or cost version may change before the second save. If the app rejects the second action, refresh, inspect the remaining goods or latest document, then decide what actually remains to do. Do not change quantities merely to force a save. A confirmed duplicate retry is the original action's acknowledgment, not permission to dispose goods or hand out money again.
