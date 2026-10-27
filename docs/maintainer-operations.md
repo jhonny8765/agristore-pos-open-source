@@ -42,7 +42,7 @@ Before real selling, record the production project, backup destination and encry
 
 Restore an actual scheduled production backup into a separate isolated working environment. Record the backup ID/time, restoration start/end, migrations, table content fingerprints and checks of sales/payments, stock/ledger, holds, transit, costs and audit evidence. Test sign-in/application access using controlled identities, without copying live credentials into logs or using the restored copy for customer transactions. Record any gap against the agreed recovery objectives.
 
-A passing disposable CI dump/restore is useful software evidence; actual production backup scheduling, retained encrypted copies and a production-backup restore still require configuration and proof. No production backup schedule or external alert delivery was established by this follow-up.
+A passing disposable CI dump/restore is useful software evidence; actual production backup scheduling, retained encrypted copies and a production-backup restore still require configuration and proof. The latest [availability/backup verification](availability-backup-verification.md) records the enabled database-only monitor and confirmed test email. Production backup scheduling and off-site recovery remain unconfigured.
 
 During the pilot, review original pending sales/requests and cash/stock daily. Review overdue investigations, held goods, transfer differences and staff access with the business owner. Track hosting/database growth and completed backup runs. After major changes, rehearse recovery against the intended release and formats. Keep a named human maintainer and an agreed contact/escalation method.
 

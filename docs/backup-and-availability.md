@@ -1,0 +1,37 @@
+# Backup protection and availability alerts
+
+The website maintainer operates the hosting, backups and incident response. This follow-up supplies tested tools; it does not establish a production backup schedule or certify every branch's cash/stock.
+
+## Availability checks
+
+`GET /api/health` checks that the database can execute a minimal read-only probe and that the authenticated business-command interface exists and is executable. Success is HTTP 200; missing configuration, network timeout, invalid response or database failure is HTTP 503. Responses contain only service/version, availability, public build identity and check time. They are uncached and contain no organization, sale, staff, stock or credential data.
+
+The hosting health route requires explicit `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` configuration. Preview and production must point to their intended separate databases; the route fails closed when these values are absent. Do not rely on a built-in test connection as production configuration.
+
+The database probe runs with the caller's normal privileges, reads system metadata only, and grants no access to business commands or tables. Availability is not proof of sales correctness, branch synchronization, backup freshness or store readiness. A server cannot observe an offline purchase that has not reached it; the existing local queue warning and recovery exports remain necessary.
+
+The public-source **POS availability monitor** workflow requires no private database credentials. In website mode (`POS_MONITOR_MODE=website`), with `POS_MONITOR_ENABLED=true` and `POS_MONITOR_URL` set to the plain stable HTTPS website origin, it checks `/api/health` roughly every fifteen minutes and retries three times. It rejects HTML/sign-in pages, redirects, old/future timestamps, mismatched service/version and unavailable responses. Logs omit raw responses and credentials. Schedules can be delayed; this is not an instantaneous or guaranteed-delivery alarm service. See [GitHub schedule limits](https://docs.github.com/en/actions/how-tos/troubleshoot-workflows).
+
+In database-only mode (`POS_MONITOR_MODE=database`), set the origin to the Supabase project and supply only its existing `sb_publishable_` key in `POS_MONITOR_PUBLISHABLE_KEY`. This POSTs to the anonymous read-only health RPC. Privileged/legacy keys are rejected. A database-only result explicitly says the website is not checked; it does not bypass Vercel protection or access business records.
+
+New installations are disabled by default. Before enabling it, establish that the stable endpoint is reachable from an unauthenticated external runner and returns the correct fresh response. A Vercel-protected preview redirects outside the app, so an external monitor cannot test the protected application. Preserve that protection; configure a public production endpoint or explicitly approved monitoring-access method first. Do not call a Vercel sign-in page a healthy POS.
+
+GitHub schedules are best-effort. The maintainer must review the last successful run daily; public-repository schedules can be disabled after sixty days without repository activity. Before relying on unattended production monitoring, establish an independent missed-heartbeat alert so silence is detected too. No independent heartbeat service is configured here. [GitHub automatic disabling rules](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/disable-and-enable-workflows).
+
+## Email delivery
+
+GitHub failed-workflow emails use the maintainer account's existing verified notification address and preferences. Check **GitHub Settings → Notifications → Actions**, select email and failed workflows, then verify the intended address without unintentionally changing unrelated projects' routing. The test workflow input `notification_test=true` creates an intentionally failed run named **TEST email notification (no store outage)**; it does not call or interrupt the website. Confirm receipt in Inbox/Spam before declaring delivery verified. [GitHub notification instructions](https://docs.github.com/en/subscriptions-and-notifications/how-tos/managing-github-actions-notifications).
+
+Enable a monitoring mode only after its endpoint and email delivery are both verified. No public issue, third-party mailbox or credential-bearing alert is created. No business backup or key is uploaded to the public repository or its workflow artifacts.
+
+## Protecting an actual database export
+
+1. Choose and record the production project, backup owner, retention, acceptable lost-data window and recovery time. Obtain a complete consistent database export using the provider's supported procedure, including the required schema/auth/business data. Keep storage objects and configuration in the recovery plan when applicable. A receipt CSV or local recovery JSON is not a complete database backup. [Supabase backup guidance](https://supabase.com/docs/guides/platform/backups).
+2. Keep the finished export on protected local storage. Use a separately held raw 32-byte key file, generated securely and kept outside the source repository and backup destination. Record who can retrieve it after the cashier/maintainer PC fails. Do not send keys or database passwords through chat or commit them.
+3. Set `POS_BACKUP_KEY_FILE` privately to that key file. Run `node scripts/backup-archive.mjs encrypt <completed-export> <unused-encrypted-output>`. Use a trusted filesystem supporting same-directory hard links, such as NTFS or ext4. The streaming tool encrypts with AES-256-GCM, publishes only a completed file, refuses overwrite and records an SHA-256 digest. The key is never embedded in the output or printed.
+4. Copy the encrypted archive to an approved protected off-site destination and compare its digest. Keep the recovery key separately. A copy on the same PC or physical disk does not establish off-site recovery. No off-site destination or production key is configured by this follow-up.
+5. For a drill, run `node scripts/backup-archive.mjs decrypt <encrypted-input> <unused-restore-file>` using the protected key, then restore only into a separate isolated test database. A wrong key, damaged/truncated archive or unsupported format must fail without publishing a restored target. Do not use `.partial-*` files left by an interrupted process. Decryption alone does not verify database restoration.
+6. Compare the original backup snapshot and restored data: complete retained table fingerprints, sales/payments, inventory ledger/projection, holds, transit, costs and audit evidence. Exercise the restored application and roles. Record backup time, start/end, digest and result. The disposable test drill now uses the authenticated decrypted full `pg_dump` for the existing 40-table functional restoration checks.
+7. Keep each cashier's unresolved original records and recovery exports protected separately. They may not yet exist in a server backup. After restoring an older server backup, identify the recovery cutoff and reconcile every branch's transactions, including sales previously acknowledged after that cutoff. Do not blindly re-enter purchases or assume an older backup contains later cash/stock movements; automated replay of all previously confirmed history is not supplied by this follow-up.
+
+No production backup has been created, uploaded, scheduled or certified by this tooling release. The backup destination, key custody, schedule/retention and actual production restore remain launch requirements.
