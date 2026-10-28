@@ -49,6 +49,7 @@ import {
   X,
 } from "lucide-react";
 import Decimal from "decimal.js";
+import Image from "next/image";
 import { StoreBrand } from "./store-brand";
 import { ProductSetupForm } from "./product-setup-form";
 import { kiloUnit } from "../lib/quantity-entry";
@@ -104,6 +105,7 @@ import {
   onlineOperation,
   pendingOperations,
   retryOperation,
+  requireNoPendingClosure,
   type PendingOperation,
 } from "../lib/operations";
 import { Button } from "./ui/button";
@@ -725,6 +727,7 @@ export function StoreApp() {
     event.preventDefault();
     const f = new FormData(event.currentTarget);
     await run(async () => {
+      await requireNoPendingClosure(db, member!.organizationId, branchId);
       let deviceId = await setting<string>(db, "deviceId");
       if (!deviceId) {
         deviceId = crypto.randomUUID();
@@ -985,7 +988,7 @@ export function StoreApp() {
     return (
       <div className="loading">
         <Sprout size={34} />
-        <p>Opening AgriStore…</p>
+        <p>Opening Better Yield…</p>
       </div>
     );
   if (!signedIn)
@@ -997,21 +1000,39 @@ export function StoreApp() {
           </div>
           <div>
             <h1>
-              Cash checkout.
+              Your partner in
               <br />
-              Traceable stock.
+              every harvest.
             </h1>
             <p>
-              AgriStore POS
+              Better Yield Agri Trading and Services
               <br />
-              For agricultural supply stores
+              Crop nutrition · Crop care
             </p>
+            <figure className="auth-photo">
+              <Image
+                src="/brand/better-yield-display.jpg"
+                alt="Better Yield’s agricultural product display and branded booth"
+                width={880}
+                height={960}
+                loading="eager"
+                unoptimized
+              />
+              <figcaption>From the Better Yield team</figcaption>
+            </figure>
             <div className="auth-proof">
               <ShieldCheck size={21} />
               <span>Cash checkout · Stock records · Your branches</span>
             </div>
           </div>
-          <p className="auth-foot">Open-source POS and inventory</p>
+          <a
+            className="auth-foot"
+            href="https://www.facebook.com/profile.php?id=100054562864276"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Better Yield on Facebook <ArrowRight size={14} />
+          </a>
         </section>
         <section className="auth-form">
           <div className="auth-form-inner">
@@ -1207,7 +1228,7 @@ export function StoreApp() {
         <a
           href="#main"
           className="wordmark"
-          aria-label="AgriStore Point of Sale home"
+          aria-label="Better Yield Point of Sale home"
         >
           <StoreBrand />
         </a>
@@ -2950,8 +2971,11 @@ export function StoreApp() {
                         }
                         onClick={() =>
                           void run(async () => {
-                            await retryOperation(db, member.userId, op);
-                            notify("Original operation confirmed.");
+                            const result = await retryOperation(db, member.userId, op);
+                            if (op.action === "close_shift") {
+                              setLease(await setting<Lease>(db, "lease"));
+                              notify(`Original shift closing confirmed. Expected cash ${money(Number(result.expected_cash))}; counted ${money(Number(result.counted_cash))}.`);
+                            } else notify("Original operation confirmed.");
                           })
                         }
                       >
@@ -3036,7 +3060,7 @@ export function StoreApp() {
                         </div>
                         <div>
                           <dt>Unconfirmed local sales</dt>
-                          <dd>{pending.length}</dd>
+                          <dd>{allPendingCount}</dd>
                         </div>
                       </dl>
                       <Button
@@ -3044,6 +3068,7 @@ export function StoreApp() {
                         disabled={!online || busy || practice}
                         onClick={() =>
                           void run(async () => {
+                            await requireNoPendingClosure(db, member.organizationId, branchId);
                             const next = await command<Lease>("renew_shift", {
                               ...context(),
                               deviceId: lease.deviceId,
@@ -3062,18 +3087,18 @@ export function StoreApp() {
                           e.preventDefault();
                           const f = new FormData(e.currentTarget);
                           void run(async () => {
+                            if (useCart.getState().items.length)
+                              throw new Error("Finish or remove the unfinished basket before closing the shift. No sale has been saved for that basket.");
                             if (pending.length)
                               throw new Error(
                                 "Synchronize every saved sale before closing the shift.",
                               );
-                            const result = await command<Row>("close_shift", {
+                            const result = await onlineOperation(db, member.userId, "close_shift", {
                               ...context(),
                               shiftId: lease.shiftId,
                               countedCash: cents(inputValue(f, "cash")),
                             });
-                            await db.settings.delete("lease");
-                            setLease(undefined);
-                            cart.clear();
+                            setLease(await setting<Lease>(db, "lease"));
                             notify(
                               `Shift closed. Expected cash ${money(Number(result.expected_cash))}; counted ${money(Number(result.counted_cash))}.`,
                             );
@@ -3091,12 +3116,13 @@ export function StoreApp() {
                         </Field>
                         <Button
                           disabled={
-                            !online || busy || practice || !!pending.length
+                            !online || busy || practice || allPendingCount > 0 || operations.length > 0 || cart.items.length > 0
                           }
                         >
                           Reconcile & close shift
                         </Button>
                       </form>
+                      <p>Finish the basket and confirm every saved sale, stock request and refund before closing. If closing is interrupted, keep this profile and use Sync center → Retry original request. The original counted cash is retained.</p>
                     </>
                   ) : (
                     <p className="muted">
@@ -3108,7 +3134,7 @@ export function StoreApp() {
                   <h2>Application & recovery</h2>
                   <StorageHealth />
                   <p className="muted">
-                    Install AgriStore from your browser’s app menu after opening your
+                    Install Better Yield from your browser’s app menu after opening your
                     shift online. Keep this dedicated browser profile and its
                     site data.
                   </p>
@@ -3171,7 +3197,7 @@ export function StoreApp() {
                         }
                         if (!waiting) {
                           setUpdateFeedback(
-                            "No new download is available. If an earlier update is not visible, close and reopen AgriStore. Keep this browser's site data.",
+                            "No new download is available. If an earlier update is not visible, close and reopen Better Yield. Keep this browser's site data.",
                           );
                           notify("No new app download is available.");
                           return;
@@ -3193,14 +3219,14 @@ export function StoreApp() {
                         let restarting = false;
                         try {
                           setUpdateFeedback(
-                            "Update downloaded. Installing it before reopening AgriStore…",
+                            "Update downloaded. Installing it before reopening Better Yield…",
                           );
                           const result = await activateReadyUpdate(
                             waiting,
                             canRestart,
                             () => {
                               setUpdateFeedback(
-                                "Update installed. Reopening AgriStore… If this window stays open, close it and reopen AgriStore. Keep this browser's site data.",
+                                "Update installed. Reopening Better Yield… If this window stays open, close it and reopen Better Yield. Keep this browser's site data.",
                               );
                               const destination = new URL(window.location.href);
                               destination.searchParams.set(
@@ -3214,7 +3240,7 @@ export function StoreApp() {
                           restarting = result === "restarting";
                           if (!restarting)
                             setUpdateFeedback(
-                              "Update ready. Finish checkout and confirm every pending record before reopening AgriStore.",
+                              "Update ready. Finish checkout and confirm every pending record before reopening Better Yield.",
                             );
                         } catch (error) {
                           setUpdateFeedback(
@@ -3586,7 +3612,7 @@ export function StoreApp() {
         <footer className="workspace-footer">
           <span>
             <Sprout size={14} />
-            AgriStore POS
+            Better Yield POS
           </span>
           <span>
             {practice

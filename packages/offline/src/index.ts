@@ -92,6 +92,8 @@ export async function saveCheckout(
       }
       const lease = await setting<Lease>(db, "lease");
       requireLease(lease, now);
+      if (await setting(db, `operation:close_shift:${lease.organizationId}:${lease.branchId}`))
+        throw new Error("Shift closing is awaiting confirmation. Keep this basket and retry the original closing request in Sync center before selling.");
       if (
         sale.organizationId !== lease.organizationId ||
         sale.branchId !== lease.branchId ||
@@ -412,6 +414,7 @@ export async function readLocalSales(db: PosDatabase, scope: RecoveryScope, limi
 }
 
 export const recoveryOperationIds: Record<string, string> = {
+  close_shift: "shiftId",
   receive_stock: "receiptId", dispatch_transfer: "transferId", receive_transfer: "receiptId",
   submit_count: "countId", refund_sale: "refundId", partial_refund_sale: "refundId", correct_refund: "correctionId", record_stock_issue: "issueId",
   disposition_hold: "dispositionId", write_off_transfer: "receiptId", reject_stock_issue:"decisionId",
@@ -423,7 +426,7 @@ export const recoveryOperationIds: Record<string, string> = {
   inspect_delivery: "receiptId", record_delivery_claim: "claimEventId",
   reverse_delivery: "reversalId",
 };
-const referenceOperations = new Set(["approve_count", "cancel_blind_count"]);
+const referenceOperations = new Set(["approve_count", "cancel_blind_count", "close_shift"]);
 export type RecoveryActor = Pick<Lease, "organizationId" | "branchId" | "cashierId" | "role">;
 const RECOVERY_PART_SIZE = 1000;
 interface RecoveryArchive {
