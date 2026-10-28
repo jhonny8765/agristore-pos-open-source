@@ -49,7 +49,6 @@ import {
   X,
 } from "lucide-react";
 import Decimal from "decimal.js";
-import Image from "next/image";
 import { StoreBrand } from "./store-brand";
 import { ProductSetupForm } from "./product-setup-form";
 import { kiloUnit } from "../lib/quantity-entry";
@@ -988,7 +987,7 @@ export function StoreApp() {
     return (
       <div className="loading">
         <Sprout size={34} />
-        <p>Opening Better Yield…</p>
+        <p>Opening AgriStore…</p>
       </div>
     );
   if (!signedIn)
@@ -1000,39 +999,21 @@ export function StoreApp() {
           </div>
           <div>
             <h1>
-              Your partner in
+              Cash checkout.
               <br />
-              every harvest.
+              Traceable stock.
             </h1>
             <p>
-              Better Yield Agri Trading and Services
+              AgriStore POS
               <br />
-              Crop nutrition · Crop care
+              For agricultural supply stores
             </p>
-            <figure className="auth-photo">
-              <Image
-                src="/brand/better-yield-display.jpg"
-                alt="Better Yield’s agricultural product display and branded booth"
-                width={880}
-                height={960}
-                loading="eager"
-                unoptimized
-              />
-              <figcaption>From the Better Yield team</figcaption>
-            </figure>
             <div className="auth-proof">
               <ShieldCheck size={21} />
               <span>Cash checkout · Stock records · Your branches</span>
             </div>
           </div>
-          <a
-            className="auth-foot"
-            href="https://www.facebook.com/profile.php?id=100054562864276"
-            target="_blank"
-            rel="noreferrer"
-          >
-            Better Yield on Facebook <ArrowRight size={14} />
-          </a>
+          <p className="auth-foot">Open-source POS and inventory</p>
         </section>
         <section className="auth-form">
           <div className="auth-form-inner">
@@ -1228,7 +1209,7 @@ export function StoreApp() {
         <a
           href="#main"
           className="wordmark"
-          aria-label="Better Yield Point of Sale home"
+          aria-label="AgriStore Point of Sale home"
         >
           <StoreBrand />
         </a>
@@ -3134,7 +3115,7 @@ export function StoreApp() {
                   <h2>Application & recovery</h2>
                   <StorageHealth />
                   <p className="muted">
-                    Install Better Yield from your browser’s app menu after opening your
+                    Install AgriStore from your browser’s app menu after opening your
                     shift online. Keep this dedicated browser profile and its
                     site data.
                   </p>
@@ -3197,7 +3178,7 @@ export function StoreApp() {
                         }
                         if (!waiting) {
                           setUpdateFeedback(
-                            "No new download is available. If an earlier update is not visible, close and reopen Better Yield. Keep this browser's site data.",
+                            "No new download is available. If an earlier update is not visible, close and reopen AgriStore. Keep this browser's site data.",
                           );
                           notify("No new app download is available.");
                           return;
@@ -3219,14 +3200,14 @@ export function StoreApp() {
                         let restarting = false;
                         try {
                           setUpdateFeedback(
-                            "Update downloaded. Installing it before reopening Better Yield…",
+                            "Update downloaded. Installing it before reopening AgriStore…",
                           );
                           const result = await activateReadyUpdate(
                             waiting,
                             canRestart,
                             () => {
                               setUpdateFeedback(
-                                "Update installed. Reopening Better Yield… If this window stays open, close it and reopen Better Yield. Keep this browser's site data.",
+                                "Update installed. Reopening AgriStore… If this window stays open, close it and reopen AgriStore. Keep this browser's site data.",
                               );
                               const destination = new URL(window.location.href);
                               destination.searchParams.set(
@@ -3240,7 +3221,7 @@ export function StoreApp() {
                           restarting = result === "restarting";
                           if (!restarting)
                             setUpdateFeedback(
-                              "Update ready. Finish checkout and confirm every pending record before reopening Better Yield.",
+                              "Update ready. Finish checkout and confirm every pending record before reopening AgriStore.",
                             );
                         } catch (error) {
                           setUpdateFeedback(
@@ -3612,7 +3593,7 @@ export function StoreApp() {
         <footer className="workspace-footer">
           <span>
             <Sprout size={14} />
-            Better Yield POS
+            AgriStore POS
           </span>
           <span>
             {practice
