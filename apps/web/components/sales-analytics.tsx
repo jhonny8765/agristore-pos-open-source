@@ -2,7 +2,7 @@
 import {useCallback,useEffect,useId,useMemo,useRef,useState} from "react";
 import Decimal from "decimal.js";
 import {command} from "../lib/api";
-import {analyticsBar,analyticsChange,analyticsCsv,analyticsMoney,popularProducts,validateAnalyticsFilters,type SalesAnalytics as Report,type SalesFilters,type SalesInterval,type SalesPeriod} from "../lib/sales-analytics";
+import {analyticsBar,analyticsChange,analyticsCsv,analyticsMoney,popularProducts,readSalesAnalytics,validateAnalyticsFilters,type SalesAnalytics as Report,type SalesFilters,type SalesInterval,type SalesPeriod} from "../lib/sales-analytics";
 import {Button} from "./ui/button";
 import styles from "./sales-analytics.module.css";
 
@@ -16,7 +16,7 @@ export function SalesAnalytics({organizationId,branchId,branchName,online,disabl
  const [draft,setDraft]=useState(initial),[filters,setFilters]=useState(initial),[data,setData]=useState<Report>(),[error,setError]=useState(""),[loading,setLoading]=useState(false),[sort,setSort]=useState<"purchases"|"value">("purchases"),[search,setSearch]=useState(""),[limit,setLimit]=useState(20);
  const generation=useRef(0),id=useId();
  const invalidate=useCallback(()=>{generation.current++;},[]);
- const load=useCallback(async()=>{const request=++generation.current;setLoading(true);setError("");try{const result=await command<Report>("sales_analytics",{organizationId,branchId,...filters});if(request!==generation.current)return;if(result.version!==1||result.branchId!==branchId)throw new Error("The report did not match this branch. Refresh online.");setData(result);setLimit(20);}catch(e){if(request===generation.current)setError(e instanceof Error?e.message:"Could not load sales analytics. Retry online.");}finally{if(request===generation.current)setLoading(false);}},[organizationId,branchId,filters]);
+ const load=useCallback(async()=>{const request=++generation.current;setLoading(true);setError("");try{const result=await command<unknown>("sales_analytics",{organizationId,branchId,...filters});if(request!==generation.current)return;setData(readSalesAnalytics(result,branchId,filters));setLimit(20);}catch(e){if(request===generation.current)setError(e instanceof Error?e.message:"Could not load sales analytics. Retry online.");}finally{if(request===generation.current)setLoading(false);}},[organizationId,branchId,filters]);
  useEffect(()=>{if(online)void load();else setLoading(false);return invalidate;},[load,online,revision,invalidate]);
  const products=useMemo(()=>popularProducts(data?.products??[],sort,search),[data,sort,search]);
  const max=data?.trend.reduce((a,p)=>new Decimal(a).gte(p.grossSales)?a:p.grossSales,"0")??"0";
