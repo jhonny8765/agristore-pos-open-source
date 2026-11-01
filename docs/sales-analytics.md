@@ -22,6 +22,8 @@ The report shows:
 
 These figures are **not profit, customer credit, official tax invoices or the cash counted in a drawer**. Use the shift's cash reconciliation for the drawer. A later refund does not rewrite the original sale date or erase its original sale. A corrected refund retains the original payout, its cash recovery and any replacement payout.
 
+A sale saved offline enters the report only after the server confirms it, under its original sale date. A delayed upload can therefore increase an earlier day's report when refreshed. Each CSV is a snapshot at its exported time, not proof that every cashier PC had already synchronized.
+
 ## Read the trend
 
 The bars show gross sales. Zero-sales days/weeks/months remain visible. Scroll the chart when needed, or group a long period by week/month. Open **Show exact sales and refund totals by period** for the original amounts and distinct purchase counts. **Export sales trend (CSV)** exports all buckets in that loaded snapshot.
@@ -39,5 +41,9 @@ Search by name/SKU, or use **Show 20 more products**. **Export all product total
 ## If the report cannot refresh
 
 Keep the existing report and read its displayed snapshot. A failed date change leaves the original figures and exports together; it never labels old figures as the requested new period. Reconnect and press **Refresh sales analytics** to retry. The report is not cached as a complete offline sales database and cannot include purchases still waiting on another PC.
+
+If **Sales analytics could not be verified** appears, the app rejected an incomplete or inconsistent response. It checks the requested branch and dates against the server snapshot, exact totals, comparison arithmetic, complete calendar buckets and product totals before replacing the report. The last verified report and its original CSV exports remain available. Refresh online; if the message repeats, report it to the maintainer with the displayed branch, dates and snapshot time. Do not clear the browser's site data or recreate sales to fix a report.
+
+These checks detect inconsistent responses; they do not prove that every physical transaction was recorded or that a recorded quantity was measured correctly. Continue daily cash and stock checks.
 
 Viewing, filtering, sorting and exporting analytics create no sale, payment, refund, stock adjustment or journal movement. Continue daily physical cash and stock reconciliation during the Magpet pilot.

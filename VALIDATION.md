@@ -1,5 +1,11 @@
 # Verification evidence
 
+## Analytics reconciliation and response recovery — November 2, 2026
+
+[Full gate 41335942008](https://github.com/jhonny8765/agristore-pos-open-source/actions/runs/41335942008), source `6a43781202590db7d66e9a82b779dddedd206d62`, passed **438 unit tests, 1,167 pgTAP assertions in 21 files, 25 practice-browser cases, 59 general genuine Supabase/Auth cases, 35 fixed-Magpet runs**, strict database/type/lint/build checks and the encrypted 40-table functional restore. The 119 browser executions include repeated scenarios under the branch lock. All four analytics cases passed in both authenticated configurations, including rejected malformed/inconsistent responses, retained complete exports and recovery. The 300-sale offline/lost-response/recovery/drawer rehearsal passed again.
+
+An additional 288 independent database assertions reconcile 36 report/grouping combinations against original sales, item quantities and dated refund/recovery payments, including leap days, measured units, zero-price goods, delayed uploads and exact values beyond JavaScript's safe integer range. Reports now validate scope/calendar windows, exact arithmetic, complete trend partitions and product totals before replacing a loaded snapshot. See [the audit and staging record](docs/sales-analytics-audit.md). These checks do not certify physical cashier hardware, actual inventory or production backups.
+
 ## Sales analytics — November 1, 2026
 
 [Final gate 41285553999](https://github.com/jhonny8765/agristore-pos-open-source/actions/runs/41285553999), source `3e0169ff374607aa36760826b9484738be33cad1`, passed **396 unit tests, 879 pgTAP assertions, 25 practice-browser scenarios, 58 general genuine Supabase/Auth scenarios, 34 fixed-Magpet runs**, strict type/lint/build/database lint and the encrypted 40-table functional restore. The Magpet runs repeat selected scenarios under its fixed-branch configuration, rather than constituting wholly distinct tests. Coverage includes weekly/monthly/custom periods, exact mixed-unit popularity, complete exports, failed filters/offline snapshots, role denials and narrow/accessible layouts.
