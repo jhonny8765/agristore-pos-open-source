@@ -36,11 +36,32 @@ begin
 end $$;
 revoke all on function app_private.require_enabled_branch(text,jsonb) from public,anon;
 grant execute on function app_private.require_enabled_branch(text,jsonb) to authenticated;
+create function app_private.fixed_branch_dashboard(org uuid,branch uuid) returns jsonb
+language plpgsql security definer set search_path='' as $$
+begin
+ if not app_private.can_checkout(org,branch) or not exists(select 1 from public.branches b where b.organization_id=org and b.id=branch and b.active and b.management_locked) then raise exception 'You do not have access to this branch' using errcode='42501'; end if;
+ return jsonb_build_object(
+  'grossSales',(select coalesce(sum(s.total),0) from public.sales s where s.organization_id=org and s.branch_id=branch),
+  'transactions',(select count(*) from public.sales s where s.organization_id=org and s.branch_id=branch),
+  'refunds',(select -coalesce(sum(p.amount),0) from public.payments p where p.organization_id=org and p.branch_id=branch and p.amount<0),
+  'refundRecoveries',(select coalesce(sum(p.amount),0) from public.payments p where p.organization_id=org and p.branch_id=branch and p.refund_correction_id is not null),
+  'netRefunds',(select -coalesce(sum(p.amount),0) from public.payments p where p.organization_id=org and p.branch_id=branch and (p.amount<0 or p.refund_correction_id is not null)),
+  'inTransit',(select count(*) from public.stock_transfers t where t.organization_id=org and (t.branch_id=branch or t.destination_branch_id=branch) and t.state='in_transit'),
+  'pendingCounts',(select count(*) from app_private.blind_counts c where c.organization_id=org and c.branch_id=branch and c.state not in('approved','cancelled'))+(select count(*) from public.stock_counts c where c.organization_id=org and c.branch_id=branch and c.state='pending' and c.count_method='legacy'),
+  'openStockExceptions',(select count(*) from public.stock_exceptions e where e.organization_id=org and e.branch_id=branch and e.state='open'),
+  'branchTotals',jsonb_build_array(jsonb_build_object('branchId',branch,'total',(select coalesce(sum(s.total),0) from public.sales s where s.organization_id=org and s.branch_id=branch),'lastSync',(select max(d.last_sync) from public.devices d where d.organization_id=org and d.branch_id=branch and d.active)))
+ );
+end $$;
+revoke all on function app_private.fixed_branch_dashboard(uuid,uuid) from public,anon;
+grant execute on function app_private.fixed_branch_dashboard(uuid,uuid) to authenticated;
 create or replace function public.agri_command(action text,data jsonb) returns jsonb language plpgsql security invoker set search_path='' as $$
+declare result jsonb;
 begin
  perform app_private.require_enabled_branch(action,data);
  if action in ('create_branch','rename_branch') then return app_private.branch_command(action,data); end if;
- return app_private.command(action,data);
+ result:=app_private.command(action,data);
+ if action='dashboard' and exists(select 1 from public.branches b where b.organization_id=(data->>'organizationId')::uuid and b.id=(data->>'branchId')::uuid and b.active and b.management_locked) then return result||app_private.fixed_branch_dashboard((data->>'organizationId')::uuid,(data->>'branchId')::uuid); end if;
+ return result;
 end $$;
 revoke all on function public.agri_command(text,jsonb) from public,anon;
 grant execute on function public.agri_command(text,jsonb) to authenticated;

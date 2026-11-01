@@ -1813,7 +1813,7 @@ export function StoreApp() {
             <>
               <div className="summary-strip">
                 <div>
-                  <span>Recorded sales · all branches</span>
+                  <span>Recorded sales · {branchLocked ? selectedBranch?.name : "all branches"}</span>
                   <strong>{money(Number(summary.grossSales ?? 0))}</strong>
                   <small>
                     {Number(summary.transactions ?? 0)} completed transactions
