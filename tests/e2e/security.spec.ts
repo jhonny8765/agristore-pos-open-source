@@ -1,0 +1,8 @@
+import {test,expect} from "@playwright/test";
+test("production headers restrict foreign scripts while the offline cashier remains usable",async({page})=>{
+ const response=await page.goto("/");const headers=response!.headers();
+ expect(headers["content-security-policy"]).toContain("frame-ancestors 'none'");expect(headers["content-security-policy"]).toContain("object-src 'none'");expect(headers["content-security-policy"]).not.toContain("unsafe-eval");expect(headers["permissions-policy"]).toBe("camera=(), microphone=(), geolocation=(), payment=()");expect(headers["strict-transport-security"]).toBe("max-age=31536000");expect(headers["x-powered-by"]).toBeUndefined();
+ const violation=await page.evaluate(()=>new Promise<{directive:string;blocked:string}>(resolve=>{const listener=(event:SecurityPolicyViolationEvent)=>{if(event.blockedURI.startsWith("https://example.invalid/")){document.removeEventListener("securitypolicyviolation",listener);resolve({directive:event.effectiveDirective,blocked:event.blockedURI});}};document.addEventListener("securitypolicyviolation",listener);const script=document.createElement("script");script.src="https://example.invalid/blocked-security-test.js";document.head.append(script);}));
+ expect(violation.directive).toBe("script-src-elem");expect(violation.blocked).toBe("https://example.invalid/blocked-security-test.js");
+ await page.getByRole("button",{name:"Try practice checkout",exact:true}).click();await page.getByRole("button",{name:"Add Grower feeds",exact:true}).click();await page.getByLabel("Cash received",{exact:true}).fill("2000");await page.getByRole("button",{name:"Complete cash sale",exact:true}).click();await expect(page.getByRole("heading",{name:"Sale saved.",exact:true})).toBeVisible();
+});

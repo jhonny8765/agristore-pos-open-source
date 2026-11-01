@@ -140,6 +140,23 @@ create temporary table next_count_page as select public.agri_command('count_work
 insert into tap_results select is((select jsonb_array_length(result->'rows') from next_count_page),19,'Older page retains every remaining count at a shared timestamp');
 insert into tap_results select is((select count(*)::integer from (select value->>'id' id from count_page,jsonb_array_elements(result->'rows') with ordinality e(value,n) where n<=50 intersect select value->>'id' from next_count_page,jsonb_array_elements(result->'rows')) shared),0,'Older count pages contain no duplicate displayed IDs');
 reset role;
+-- Defense in depth: simulate a future accidental read grant/permissive policy
+-- against real sealed evidence. Restrictive command-only policies must still
+-- protect both anonymous clients and authenticated owners. All grants roll back.
+insert into tap_results select cmp_ok((select count(*)::integer from app_private.count_observations),'>',0,'Security regression uses existing sealed observations, not an empty table');
+grant usage on schema app_private to anon;
+grant select on app_private.count_observations,app_private.blind_counts to anon,authenticated;
+grant all on tap_results to anon;
+create policy test_future_broad_read on app_private.count_observations for select to anon,authenticated using(true);
+create policy test_future_broad_read on app_private.blind_counts for select to anon,authenticated using(true);
+set local role authenticated;
+select pg_temp.login(11);
+insert into tap_results select is((select count(*)::integer from app_private.count_observations),0,'Even an owner cannot directly read sealed observations after an accidental broad read grant');
+insert into tap_results select is((select count(*)::integer from app_private.blind_counts),0,'Private expected quantities remain inaccessible after an accidental permissive policy');
+insert into tap_results select cmp_ok(jsonb_array_length(public.agri_command('count_workspace',pg_temp.ctx())->'rows'),'>',0,'Authorized owner command still returns the permitted count workspace');
+set local role anon;
+insert into tap_results select is((select count(*)::integer from app_private.count_observations),0,'Anonymous read remains denied even with an accidental table grant and permissive policy');
+reset role;
 select line from tap_results;
 select * from finish();
 rollback;
