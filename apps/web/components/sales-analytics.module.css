@@ -9,7 +9,7 @@
 .metrics>div {padding:20px 18px 20px 0;min-width:0;}
 .metrics dt {color:var(--muted);font-size:12px;}
 .metrics dd {margin:7px 0;font-family:var(--font-display);font-size:24px;font-weight:750;overflow-wrap:anywhere;color:var(--forest);}
-.metrics small {display:block;color:var(--muted);}
+.metrics small {display:block;color:var(--muted);font-family:var(--font-sans);font-size:12px;font-weight:400;margin-top:6px;}
 .sectionHead {display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;margin:30px 0 16px;}
 .sectionHead p {margin:0;}
 .chart {max-height:380px;overflow:auto;border-block:1px solid var(--line);padding:12px 0;}
