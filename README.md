@@ -6,6 +6,7 @@ This edition contains generic branding and synthetic fixtures. It includes no pr
 
 ## Features
 
+- Owner/assigned-manager [sales analytics](docs/sales-analytics.md): weekly/monthly/custom periods, comparison totals, daily/weekly/monthly trends, complete CSV exports and product popularity by distinct purchases or gross sales; original units and separately posted refund/recovery cash stay explicit.
 - Cash checkout in Philippine pesos, integer centavos, exact sack/kg conversions, fractional weights and actual-weight confirmation for peso requests.
 - Offline checkout for an already authorized cashier/shift, durable IndexedDB transactions, permanent checkout UUIDs, idempotent server processing and recoverable synchronization.
 - Append-only stock movements, purchasing, lots/expiry, separate transfer dispatch/receipt, held stock and owner-approved stock issues.

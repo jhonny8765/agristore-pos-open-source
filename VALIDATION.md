@@ -1,5 +1,11 @@
 # Verification evidence
 
+## Sales analytics — November 1, 2026
+
+[Final gate 41285553999](https://github.com/jhonny8765/agristore-pos-open-source/actions/runs/41285553999), source `3e0169ff374607aa36760826b9484738be33cad1`, passed **396 unit tests, 879 pgTAP assertions, 25 practice-browser scenarios, 58 general genuine Supabase/Auth scenarios, 34 fixed-Magpet runs**, strict type/lint/build/database lint and the encrypted 40-table functional restore. The Magpet runs repeat selected scenarios under its fixed-branch configuration, rather than constituting wholly distinct tests. Coverage includes weekly/monthly/custom periods, exact mixed-unit popularity, complete exports, failed filters/offline snapshots, role denials and narrow/accessible layouts.
+
+The [final backend capacity run](https://github.com/jhonny8765/agristore-pos-open-source/actions/runs/41284857855) matched 100,711 selected branch purchases and twelve calendar buckets in 0.88 seconds, within a 548,515-sale retained fixture with zero stock projection differences. See [the detailed review and release record](docs/sales-analytics-verification.md) and [owner guide](docs/sales-analytics.md). Database timing does not certify hosted HTTP/browser performance, hardware endurance, actual inventory, backup scheduling or the Magpet pilot.
+
 ## Fixed-branch Magpet rehearsal — November 1, 2026
 
 The [final gate 41282982496](https://github.com/jhonny8765/agristore-pos-open-source/actions/runs/41282982496), source `ed0d86086476214853ec8adf102a97e8a2519088`, passed 381 unit tests, 838 pgTAP assertions, type/lint/build/database lint, the encrypted 40-table functional restore, 25 practice-browser scenarios, 55 general genuine Supabase/Auth scenarios and 31 additional fixed-Magpet runs (thirty repeated workflows plus the new 300-sale cashier case). Every original sale/payload, payment, stock movement and final drawer balance matched; lost committed response and recovery replay produced no duplicate effects. The fresh [capacity rehearsal](https://github.com/jhonny8765/agristore-pos-open-source/actions/runs/41282692017) also passed with final 548,515 sales/payments, 1,096,015 sale movements and zero projection differences.

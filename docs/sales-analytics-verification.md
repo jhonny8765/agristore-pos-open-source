@@ -1,0 +1,47 @@
+# Sales analytics verification — November 1, 2026
+
+Requested outcome: usable weekly/monthly sales analysis and popular products for the Magpet pilot, preserving original cash/stock history and the fixed-branch restriction.
+
+## Implemented scope
+
+Read-only owner/assigned-manager reporting adds today, Monday-based week, previous week, month-to-date, previous calendar month, twelve calendar months and bounded custom dates. One server query snapshot supplies exact centavo totals, comparison dates, zero-filled daily/weekly/monthly buckets and complete product aggregates. It does not build financial totals from the first 1,000 REST records. Money and quantities cross JSON as exact text. Browser sorting and display paging reuse that same report; CSV exports include the complete snapshot, not only visible/search-matching products.
+
+Popularity counts distinct original purchases per product across unit/lot lines. Each product's original factors yield its own kg/liter/meter/piece quantity. Original sales are before refunds; separately dated refund payments and corrected-refund recoveries produce explicitly labeled sales-less-refund-cash activity, not profit or drawer cash. Unknown purchase cost is not invented to show a margin.
+
+The private helper independently verifies an active database session, owner/assigned-manager role, organization, branch and active branch configuration. Public dispatch retains the fixed-branch guard. Anonymous/cashier/stock-staff/other-branch/other-organization access remains denied. No browser administrative key, writable report table, new business mutation, sales contract, IndexedDB version or recovery-format change is introduced.
+
+## Checks and release evidence
+
+Local type checks, zero-warning lint, **396 unit tests** and the supplementary PostgreSQL preflight's **879 assertions** passed. New cases cover exact large centavos and CSV decimals, safe spreadsheet text, zero comparison/chart values, unit-independent purchase ranking, invalid/reversed/oversized/leap-year dates, more than 1,000 retained purchases, Manila midnight microseconds, mixed sack/kilo lines, separate pieces, later partial/refund-correction cash, negative refund-only activity, month/week buckets, zero-filled leap-year days and branch/role/session denials. These local PostgreSQL Auth doubles do not replace real Supabase integration.
+
+The first real database run caught the read function calling the dispatcher's VOLATILE guard while declared STABLE. The redundant inner call was removed; the helper retains independent session/role/organization/active-branch/all-branch checks, and public dispatch still applies its original guard. This preserves one read snapshot without changing authorization. No failed migration was applied to staging.
+
+The subsequent browser gate caught invalid definition-list summary markup and labels that included select-option text. Summary supporting text now stays inside its definition, with explicit label spans referenced by each dropdown. A test selector was also narrowed to the summary rather than matching its identical hidden detail-table value. The permission scenario and all financial database assertions passed before these UI corrections; the complete final browser rerun must pass them together without weakening accessibility, cash, quantity or recovery checks.
+
+## Final gate and capacity
+
+The complete [final run 41285553999](https://github.com/jhonny8765/agristore-pos-open-source/actions/runs/41285553999), public source `3e0169ff374607aa36760826b9484738be33cad1`, passed **396 unit tests in 30 files, 879 pgTAP assertions in 20 files, 25 practice-browser scenarios, 58 general genuine Supabase/Auth scenarios and 34 fixed-Magpet scenario runs**, strict database lint, type/lint/production builds and the encrypted **40-table functional dump/restore**. The Magpet runs repeat selected supported workflows under the branch lock; the combined 117 browser executions are not 117 distinct scenarios.
+
+All three new genuine analytics scenarios passed in both branch configurations: original two-sale/partial-refund totals, average/quantity/popularity, complete 23-product export despite twenty visible rows or a search, all six preset date periods, 1440/390/320 containment and accessibility; retained report/CSV scope through a failed filter request and offline/reconnect; and owner/assigned-manager access with cashier/stock-staff denials. The earlier full Overview keyboard, narrow-screen and forced-colors scenario passed again. The existing 300-sale offline Magpet/recovery/drawer regression also passed with every original ID and unchanged exact cash/stock. The restore drill additionally reads analytics from the restored database and compares its amounts/count with independent SQL.
+
+The [final backend capacity run 41284857855](https://github.com/jhonny8765/agristore-pos-open-source/actions/runs/41284857855), backend source `42c23e358be56bf2112e18142989ccca49acb106` (unchanged by the subsequent label/markup fix), passed. Its full retained fixture ended at 548,515 sales/payments and 1,096,015 sale movements with zero projection differences. The selected branch's twelve-month analytics matched independent totals for **100,711 purchases**, both product aggregates and all twelve calendar buckets in **0.88 seconds** on the disposable Linux runner. This is database timing, excluding hosted HTTP/browser latency and actual hardware/endurance; it does not certify a hosting plan.
+
+## Interface review and staging release
+
+The independent Impeccable finish reviewer returned **disposition: ship**, with no material fixes, for the loaded analytics section at desktop 1440 px and phone 390/320 px, supported by source and the passing state-transition tests. It confirmed the inherited forest/paper design, reading order, figures, refund distinctions, base units and responsive internal table scrolling. Captures contain clearly labelled TEST products in the public generic edition; they are not claims about actual Magpet stock or private browser inspection. The design documenter recorded only the built component/layout facts, preserving existing branding and design rules.
+
+Private application source `5f3236585552df4fc54b0ecbb3fb0fd7c6bbae30` built as READY Preview **`dpl_72uu2mfmwL3R6t2o9r7kD15Dh9Co`**, `agristore-57rly3mo7-team-payaman2.vercel.app`, on the verified `team-payaman2/agristore-pos` project with **Node 24.x**. After the complete gate and interface review passed, the [stable staging alias](https://agristore-pos-staging-team-payaman2.vercel.app/) was assigned and independently read back to that preview. Its fresh health response at **11:36:15 UTC** reported `status: ok` and that exact release. No production promotion or paid setting changed.
+
+Reviewed migration `20261101071619_sales_analytics.sql` was applied to the selected staging project after the passing gate. Its remote ledger version was aligned with the reviewed local filename. Hosted helper source matched the reviewed function body exactly and retained its stable-read declaration and independent authorization. The update adds a payment-date index and read functions only; it does not change business rows or grant direct business-table writes.
+
+An existing authorized owner's session was used for rolled-back, authenticated database read verification. The empty current week and nonempty previous calendar month matched independent branch-scoped sales/count queries; previous-month refunds, recovered cash, net activity, summed product values and summed trend values also matched. The authenticated branch list still contained exactly one enabled branch. This was a database permission/read check, without an employee password; it does not claim an interactive visit to the user's signed-in installed browser.
+
+All **40 hosted business-table row counts and complete content hashes matched the pre-release baseline** after migration, verification and alias release. No hosted TEST sale, refund, payment, stock movement, employee or pilot sign-off was created. Retention evidence is stored privately in `.impeccable/review/sales-analytics-retention.json`.
+
+The production-package audit reported zero known production dependency advisories. Existing development/build-package advisories remain separate maintenance work. Hosted security advisors added no new notices: the existing twelve informational [private-table RLS/no-policy notices](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy) and [disabled leaked-password protection](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection) warning remain. No permissive policy was added to suppress private-table notices.
+
+## Open the delivered report
+
+Confirm/export original pending work, finish the basket, then use **Settings → Check for app update** and reopen as instructed without clearing site data. Open **Overview → Sales analytics**, choose a period/grouping and press **Apply sales period**. The hosted older test receipts are in the previous calendar month; a current-week/month report showing zero is not a fabricated sale or failed calculation. Read the actual displayed dates and synchronize every cashier PC.
+
+Use [the owner guide](sales-analytics.md). This feature does not complete the postponed actual-PC/eight-hour/Windows restart, physical scales/printer, independently verified inventory/staff, production backup or Magpet pilot acceptance. Other branches remain locked until owner acceptance of that pilot.
