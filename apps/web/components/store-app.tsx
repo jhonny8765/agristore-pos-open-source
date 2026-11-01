@@ -1302,7 +1302,7 @@ export function StoreApp() {
             <span className="branch-icon">
               <Sprout size={18} />
             </span>
-            {branchLocked ? <strong aria-label="Current branch">{selectedBranch?.name ?? "Reconnect to load your branch"}</strong> : <><select
+            {branchLocked ? <span><span className="sr-only">Current branch: </span><strong>{selectedBranch?.name ?? "Reconnect to load your branch"}</strong></span> : <><select
               aria-label="Current branch"
               value={branchId}
               disabled={!!lease || busy || (!online && !practice)}
