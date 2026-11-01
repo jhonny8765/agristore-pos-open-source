@@ -4,8 +4,14 @@ import {randomUUID} from "node:crypto";
 import {readFile} from "node:fs/promises";
 import {countCommand} from "./blind-count-fixtures";
 
+test.afterEach(async({page},result)=>{
+ if(result.status===result.expectedStatus)return;
+ // Synthetic queue/UI observations only: never Auth headers, tokens or payloads.
+ console.log("Magpet rehearsal failure state:",JSON.stringify({queue:await page.locator(".status-tag").allTextContents().catch(()=>[]),notices:await page.locator(".notice").allTextContents().catch(()=>[]),summary:await page.locator(".sync-summary").allTextContents().catch(()=>[])}));
+});
+
 test("Magpet cashier completes 300 offline sales, recovers a lost response and closes exact cash and stock",async({page,context})=>{
- test.skip(process.env.AGRISTORE_MAGPET_PILOT!=="1","Explicit fixed-branch project only");test.setTimeout(300_000);
+ test.skip(process.env.AGRISTORE_MAGPET_PILOT!=="1","Explicit fixed-branch project only");test.setTimeout(420_000);
  if(process.env.CI!=="true"||process.platform!=="linux"||process.env.AGRISTORE_LOCAL_INTEGRATION!=="1"||process.env.NEXT_PUBLIC_SUPABASE_URL!=="http://127.0.0.1:55321")throw new Error("Disposable Linux/loopback busy-day check only");
  const makeClient=()=>createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,{auth:{persistSession:false,autoRefreshToken:false}}),owner=makeClient(),cashier=makeClient(),password=`TEST-${randomUUID()}!`,ownerEmail=`pilot-owner-${randomUUID()}@example.invalid`,cashierEmail=`pilot-cashier-${randomUUID()}@example.invalid`;
  expect((await owner.auth.signUp({email:ownerEmail,password})).error).toBeNull();const signup=await cashier.auth.signUp({email:cashierEmail,password});expect(signup.error).toBeNull();const cashierId=signup.data.user!.id;
@@ -15,14 +21,22 @@ test("Magpet cashier completes 300 offline sales, recovers a lost response and c
  const cloudRequests:string[]=[];await context.route(/https:\/\/[^/]+\.supabase\.co\//,async route=>{cloudRequests.push(new URL(route.request().url()).hostname);await route.abort();});
  async function login(p:Page,email:string){await p.getByLabel("Email address",{exact:true}).fill(email);await p.getByLabel("Password",{exact:true}).fill(password);await p.getByRole("button",{name:"Sign in",exact:true}).click();await expect(p.getByRole("button",{name:"Add TEST Magpet feeds"})).toBeVisible();}
  // The owner's real UI registers this test PC before the employee takes over.
- await page.goto("/");await login(page,ownerEmail);await page.getByRole("button",{name:"Open shift",exact:true}).click();await page.getByRole("button",{name:"Settings",exact:true}).click();await page.getByLabel("Cash counted in drawer (₱)",{exact:true}).fill("0");await page.getByRole("button",{name:"Reconcile & close shift",exact:true}).click();await expect(page.getByText("No cashier shift is open. Open one from Checkout.",{exact:true})).toBeVisible();await page.getByTitle("Sign out",{exact:true}).click();await login(page,cashierEmail);
+ await page.goto("/");await login(page,ownerEmail);await page.getByRole("button",{name:"Open shift",exact:true}).click();await page.getByRole("button",{name:"Settings",exact:true}).click();await page.getByLabel("Cash counted in drawer (₱)",{exact:true}).fill("0");await page.getByRole("button",{name:"Reconcile & close shift",exact:true}).click();await expect(page.getByText("No cashier shift is open. Open one from Checkout.",{exact:true})).toBeVisible();await page.getByTitle("Sign out",{exact:true}).click();
+ // UI sign-out revokes every owner session, including this independent API observer.
+ // Renew the observer, as in cashier.spec.ts; never read results with a revoked JWT.
+ expect((await owner.auth.signInWithPassword({email:ownerEmail,password})).error).toBeNull();
+ await login(page,cashierEmail);
  await page.getByLabel("Opening cash (₱)",{exact:true}).fill("100");await page.getByRole("button",{name:"Open shift",exact:true}).click();await expect(page.getByRole("button",{name:"Add TEST Magpet feeds"})).toBeEnabled();await expect(page.locator(".branch-picker")).toContainText("Magpet Branch");
  const denied=await cashier.rpc("agri_command",{action:"approve_stock_issue",data:{...ctx,issueId:randomUUID(),reason:"TEST prohibited cashier approval"}});expect(denied.error?.code).toBe("42501");
  await page.evaluate(()=>navigator.serviceWorker.ready.then(()=>true));await page.reload();await expect.poll(()=>page.evaluate(()=>!!navigator.serviceWorker.controller)).toBe(true);await context.setOffline(true);
  for(let i=0;i<300;i++){await page.getByRole("button",{name:"Add TEST Magpet feeds"}).click();await page.getByLabel(/^Quantity \(.+\) for TEST Magpet feeds$/).fill("0.25");await page.getByLabel("Cash received",{exact:true}).fill("20");await page.getByRole("button",{name:"Complete cash sale",exact:true}).click();await expect(page.getByRole("heading",{name:"Sale saved.",exact:true})).toBeVisible();await expect(page.getByText("₱11.25 change",{exact:true})).toBeVisible();}
  await page.reload();await expect(page.getByText("925 kg on hand",{exact:true})).toBeVisible();await page.getByRole("button",{name:/^Sync center(?:\s+\d+)?$/}).click();const download=page.waitForEvent("download");await page.getByRole("button",{name:"Export recovery file",exact:true}).click();const bytes=await readFile((await(await download).path())!);const recovery=JSON.parse(bytes.toString());expect(recovery.sales).toHaveLength(300);expect(new Set(recovery.sales.map((r:{id:string})=>r.id)).size).toBe(300);expect(recovery.sales.reduce((sum:number,r:{payload:{total:number}})=>sum+r.payload.total,0)).toBe(262500);
  let lost=false;await page.route("**/rest/v1/rpc/agri_command",async route=>{if(route.request().postDataJSON().action==="record_sale"&&!lost){const response=await route.fetch();expect(response.ok()).toBe(true);lost=true;await route.abort("failed");}else await route.continue();});await context.setOffline(false);
- await expect.poll(async()=>{const r=await owner.from("sales").select("id").eq("organization_id",organizationId);expect(r.error).toBeNull();return r.data!.length;},{timeout:120_000}).toBe(300);await expect(page.getByRole("heading",{name:"Your local queue is clear",exact:true})).toBeVisible();expect(lost).toBe(true);
+ const savedCount=async()=>{const r=await owner.from("sales").select("id").eq("organization_id",organizationId);expect(r.error).toBeNull();return r.data!.length;};
+ // An interrupted reload lock lasts up to 45s. Automatic sync sends 25 records
+ // every 15s; 300 records therefore need twelve batches, not a two-minute limit.
+ await expect.poll(savedCount,{timeout:75_000}).toBeGreaterThan(0);
+ await expect.poll(savedCount,{timeout:225_000}).toBe(300);await expect(page.getByRole("heading",{name:"Your local queue is clear",exact:true})).toBeVisible();expect(lost).toBe(true);
  const sales=await owner.from("sales").select("id,payload,total").eq("organization_id",organizationId);expect(sales.error).toBeNull();const originals=new Map<string,unknown>(recovery.sales.map((r:{id:string;payload:unknown})=>[r.id,r.payload]));for(const row of sales.data!)expect(row.payload).toEqual(originals.get(row.id));
  await page.getByLabel("Restore a recovery file",{exact:true}).setInputFiles({name:"TEST-Magpet-300.json",mimeType:"application/json",buffer:bytes});await expect(page.getByText("300 sale records checked and restored. Original transaction IDs and online requests are retained. Review the Sync center before retrying.",{exact:true})).toBeVisible();
  const payments=await owner.from("payments").select("amount").eq("organization_id",organizationId);expect(payments.error).toBeNull();expect(payments.data).toHaveLength(300);expect(payments.data!.reduce((sum,row)=>sum+Number(row.amount),0)).toBe(262500);const movements=await owner.from("inventory_movements").select("quantity").eq("organization_id",organizationId).eq("kind","sale");expect(movements.error).toBeNull();expect(movements.data).toHaveLength(300);expect(movements.data!.reduce((sum,row)=>sum+Number(row.quantity),0)).toBe(-75);
