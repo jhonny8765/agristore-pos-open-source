@@ -120,6 +120,14 @@ assert.equal(new Set([...first.slice(0,50),...next.slice(0,50)].map(s=>s.id)).si
 assert.ok([...first,...next].every(s=>s.branch_id===id(101)));
 const pageSeconds = (performance.now() - pageStart) / 1000;
 assert.ok(pageSeconds<15,`Receipt pages exceeded the app request window: ${pageSeconds}s`);
+// Full-year analytics must aggregate every branch-scoped sale/item, not REST's
+// first page. Retain exact strings and independently compare SQL ledger totals.
+const analyticsStart=performance.now();
+const analytics=lastJSON(sql(login+command("sales_analytics",{...ctx(101),period:"year",interval:"month"})));
+const analyticsSeconds=(performance.now()-analyticsStart)/1000;
+const analyticsExpected=lastJSON(sql(`select jsonb_build_object('gross',coalesce(sum(total),0)::text,'count',count(*)) from public.sales where organization_id='${org}' and branch_id='${id(101)}' and occurred_at>='${analytics.fromDate}'::date::timestamp at time zone 'Asia/Manila' and occurred_at<('${analytics.throughDate}'::date+1)::timestamp at time zone 'Asia/Manila';`));
+assert.equal(analytics.totals.grossSales,analyticsExpected.gross);assert.equal(analytics.totals.salesCount,analyticsExpected.count);assert.equal(analytics.products.length,2);assert.equal(analytics.trend.length,12);assert.ok(analyticsSeconds<15,`Annual analytics exceeded the app request window: ${analyticsSeconds}s`);
+console.log('ANALYTICS_CAPACITY '+JSON.stringify({sales:analytics.totals.salesCount,grossCentavos:analytics.totals.grossSales,products:analytics.products.length,months:analytics.trend.length,seconds:analyticsSeconds}));
 const finalSize = footprint();
 const relationBytes = size => size.relations.reduce((sum,r)=>sum+r.totalBytes,0);
 const publicGrowth = relationBytes(finalSize)-relationBytes(baselineSize);

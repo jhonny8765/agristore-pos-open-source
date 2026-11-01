@@ -249,6 +249,9 @@ try {
   assert.equal(Number(sql(`select quantity from public.branch_inventory where branch_id='${id(140)}' and product_id='${id(95)}';`,database).trim()),9.85);
   assert.equal(Number(sql(`select remaining from public.stock_holds where id='${measuredDamageHold}';`,database).trim()),0.025);
   assert.equal(command('stock_loss_report',ctx(140),database).totals.documentedLossCentavos,'1000');
+  const restoredAnalytics=command('sales_analytics',{...ctx(140),period:'month',interval:'day'},database);
+  const restoredAnalyticsTotals=lastJSON(sql(`select jsonb_build_object('gross',coalesce(sum(total),0)::text,'count',count(*)) from public.sales where organization_id='${id(2)}' and branch_id='${id(140)}' and occurred_at>='${restoredAnalytics.fromDate}'::date::timestamp at time zone 'Asia/Manila' and occurred_at<('${restoredAnalytics.throughDate}'::date+1)::timestamp at time zone 'Asia/Manila';`,database));
+  assert.equal(restoredAnalytics.totals.grossSales,restoredAnalyticsTotals.gross);assert.equal(restoredAnalytics.totals.salesCount,restoredAnalyticsTotals.count);
   assert.equal(command('loss_cost_history',{...ctx(140),lossKey:'held:'+id(144)},database).rows.length,2);
   const restoredRefund=command('partial_refund_plan',{...ctx(70),saleId:id(72)},database);
   assert.equal(restoredRefund.remainingCash,1600);assert.equal(restoredRefund.lines[0].remainingQuantity,'0.5');

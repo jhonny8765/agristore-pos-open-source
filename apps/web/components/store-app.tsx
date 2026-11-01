@@ -1,5 +1,6 @@
 "use client";
 import { MeasuredQuantity } from "./measured-quantity";
+import { SalesAnalytics } from "./sales-analytics";
 import { PartialRefundControl } from "./partial-refund";
 
 /* WORLD: A cooperative store's orderly stock book: forest ink, warm paper, ruled tables, precise figures.
@@ -1811,6 +1812,8 @@ export function StoreApp() {
 
           {view === "overview" && (
             <>
+              {!practice && (isOwner || member.role === "manager") && <SalesAnalytics key={`sales-analytics:${member.organizationId}:${branchId}:${member.userId}`} organizationId={member.organizationId} branchId={branchId} branchName={selectedBranch?.name ?? "Selected branch"} online={online} disabled={busy} revision={historyRevision} />}
+              <h2>All-time recorded totals</h2>
               <div className="summary-strip">
                 <div>
                   <span>Recorded sales · {branchLocked ? selectedBranch?.name : "all branches"}</span>
