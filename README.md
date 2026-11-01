@@ -8,6 +8,7 @@ This edition contains generic branding and synthetic fixtures. It includes no pr
 
 - Owner/assigned-manager [sales analytics](docs/sales-analytics.md): weekly/monthly/custom periods, comparison totals, daily/weekly/monthly trends, complete CSV exports and product popularity by distinct purchases or gross sales; original units and separately posted refund/recovery cash stay explicit.
 - [Verified analytics snapshots](docs/sales-analytics-audit.md): inconsistent/partial responses retain the last valid report and complete exports; automated checks independently reconcile original receipts, quantities, trends and dated refund cash.
+- [Security and maintenance](docs/free-security-maintenance.md): baseline browser restrictions, explicit private-table client denials, pinned test actions, dependency gates and reviewed update proposals. See [the before-live checklist](docs/magpet-before-live.md) for the remaining Magpet launch work.
 - Cash checkout in Philippine pesos, integer centavos, exact sack/kg conversions, fractional weights and actual-weight confirmation for peso requests.
 - Offline checkout for an already authorized cashier/shift, durable IndexedDB transactions, permanent checkout UUIDs, idempotent server processing and recoverable synchronization.
 - Append-only stock movements, purchasing, lots/expiry, separate transfer dispatch/receipt, held stock and owner-approved stock issues.
