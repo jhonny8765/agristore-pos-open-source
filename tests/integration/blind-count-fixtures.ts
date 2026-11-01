@@ -1,7 +1,9 @@
 import {randomUUID} from 'node:crypto';
 import {createClient,type SupabaseClient} from '@supabase/supabase-js';
+import {configureMagpetFixture} from './magpet-fixture';
 type Business={owner:SupabaseClient;organizationId:string;branchId:string};
 export async function countCommand<T=Record<string,unknown>>(client:SupabaseClient,action:string,data:Record<string,unknown>):Promise<T>{
+ await configureMagpetFixture(client,data);
  const response=await client.rpc('agri_command',{action,data});
  if(response.error)throw new Error(`${action}: ${response.error.message}`);
  return response.data as T;

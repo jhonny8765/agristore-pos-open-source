@@ -43,5 +43,15 @@ jobs:
         run: bash scripts/install-test-browser.sh
         timeout-minutes: 6
       - run: npm run test:integration
+      - name: Test enabled workflows with the fixed Magpet branch setup
+        run: npm run test:magpet
+      - name: Retain synthetic Magpet pilot review captures
+        uses: actions/upload-artifact@v4
+        if: always()
+        continue-on-error: true
+        with:
+          name: magpet-pilot-review
+          path: test-results/*.png
+          retention-days: 3
       - run: npx supabase stop --no-backup
         if: always()

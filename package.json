@@ -21,6 +21,7 @@
     "test:counts:restore": "node scripts/local-count-restore.mjs",
     "test:restore": "node scripts/restore-drill.mjs",
     "test:integration": "node scripts/integration-test.mjs",
+    "test:magpet": "node scripts/magpet-test.mjs",
     "db:start": "supabase start",
     "db:reset": "supabase db reset",
     "check": "npm run typecheck && npm run lint && npm test && npm run build"
