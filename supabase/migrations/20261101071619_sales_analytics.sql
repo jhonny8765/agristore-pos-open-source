@@ -16,7 +16,8 @@ begin
  or not exists(select 1 from public.branches b where b.organization_id=org and b.id=branch and b.active) then
   raise exception 'Only an active owner or this branch manager can read sales analytics' using errcode='42501';
  end if;
- perform app_private.require_enabled_branch('sales_analytics',data);
+ -- Active-branch/session/role checks above also protect direct helper calls.
+ -- Do not call the command dispatcher's VOLATILE guard inside this STABLE read.
  if coalesce((data->>'allBranches')::boolean,false) then raise exception 'Select one branch for sales analytics';end if;
  if grain not in ('day','week','month') then raise exception 'Choose daily, weekly or monthly grouping';end if;
  if period='today' then v_from:=today;v_to:=today;prev_from:=today-1;prev_to:=today-1;
