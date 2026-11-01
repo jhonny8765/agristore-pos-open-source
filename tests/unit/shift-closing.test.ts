@@ -3,12 +3,23 @@ import {afterEach,expect,it,vi} from "vitest";
 vi.mock("../../apps/web/lib/api",()=>({command:vi.fn()}));
 import {command} from "../../apps/web/lib/api";
 import {onlineOperation,pendingOperations,retryOperation} from "../../apps/web/lib/operations";
-import {PosDatabase,exportRecovery,importRecovery,saveCheckout,setSetting,setting} from "@agristore/offline";
+import {PosDatabase,exportRecovery,importRecovery,readLocalSales,saveCheckout,setSetting,setting} from "@agristore/offline";
 import {lease,sale,setupDB,uuid} from "./fixtures";
 const opened:PosDatabase[]=[];
 async function db(){const d=await setupDB();opened.push(d);return d;}
 const closing=()=>({organizationId:uuid(1),branchId:uuid(2),shiftId:uuid(5),countedCash:3200});
 afterEach(async()=>{vi.resetAllMocks();for(const d of opened.splice(0)){d.close();await d.delete();}});
+
+it("allows closing while another branch has an unresolved sale",async()=>{
+ const d=await db(),other=await saveCheckout(d,sale());
+ await d.sales.update(other.id,{"payload.branchId":uuid(90)});
+ const view=await readLocalSales(d,{organizationId:uuid(1),branchId:uuid(2),cashierId:uuid(4)});
+ expect(view.allPendingCount).toBe(1);expect(view.branchPendingCount).toBe(0);
+ vi.mocked(command).mockResolvedValueOnce({expected_cash:3200,counted_cash:3200});
+ await onlineOperation(d,uuid(4),"close_shift",closing());
+ expect(command).toHaveBeenCalledOnce();expect(await setting(d,"lease")).toBeUndefined();
+ expect((await d.sales.get(other.id))?.status).toBe("pending");
+});
 
 it.each(["pending","sending","authentication_required","retryable","review_required"] as const)("blocks closing with an old %s sale even beyond the displayed history",async status=>{
  const d=await db(),original=await saveCheckout(d,sale({occurredAt:"2026-01-01T00:00:00Z"}));await d.sales.update(original.id,{status});

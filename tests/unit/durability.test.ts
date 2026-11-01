@@ -15,6 +15,25 @@ function record(n: number, status: LocalSale["status"] = "synced"): LocalSale {
 }
 afterEach(async () => { vi.restoreAllMocks(); for(const d of databases.splice(0)) {d.close(); await d.delete();} });
 
+it("counts branch closing blockers across cashiers without including other branches or businesses",async()=>{
+  const d=await db();
+  const otherCashier=record(1,"review_required");
+  otherCashier.payload.cashierId=uuid(90);
+  const otherBranch=record(2,"pending");
+  otherBranch.payload.branchId=uuid(91);
+  const otherBusiness=record(3,"retryable");
+  otherBusiness.payload.organizationId=uuid(92);
+  await d.sales.bulkPut([otherCashier,otherBranch,otherBusiness]);
+  const blocked=await readLocalSales(d,scope);
+  expect(blocked.sales).toEqual([]);
+  expect(blocked.allPendingCount).toBe(3);
+  expect(blocked.branchPendingCount).toBe(1);
+  await d.sales.update(otherCashier.id,{status:"synced"});
+  const ready=await readLocalSales(d,scope);
+  expect(ready.allPendingCount).toBe(2);
+  expect(ready.branchPendingCount).toBe(0);
+});
+
 it("upgrades v1 indexes without changing saved IDs, states, prices or payloads",async()=>{
   const name=crypto.randomUUID(); const old=new Dexie(name);
   old.version(1).stores({products:"id,sku,category",stocks:"key,productId",sales:"id,status,nextAttempt",settings:"key",locks:"key"});

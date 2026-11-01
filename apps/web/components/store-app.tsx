@@ -222,6 +222,7 @@ export function StoreApp() {
   const [recoveryArchive, setRecoveryArchive] = useState<{ id: string; next: number; parts: number; scope: string }>();
   const [recoveryDownload, setRecoveryDownload] = useState<{ scope: string; filename: string; data: Awaited<ReturnType<typeof exportRecovery>> }>();
   const [allPendingCount, setAllPendingCount] = useState(0);
+  const [branchPendingCount, setBranchPendingCount] = useState(0);
   const [allOperationCount, setAllOperationCount] = useState(0);
   const [practice, setPractice] = useState(false);
   const [operations, setOperations] = useState<PendingOperation[]>([]);
@@ -297,6 +298,7 @@ export function StoreApp() {
     setMessage("");
   }, []);
   const selectedBranch = branchList.find((b) => b.id === branchId);
+  const branchLocked = branchList.some(b => b.managementLocked);
   const isOwner = member?.role === "owner";
   const recoveryScopeKey = member && branchId
     ? JSON.stringify([member.organizationId, branchId, member.userId, member.role]) : undefined;
@@ -319,7 +321,7 @@ export function StoreApp() {
       "r",[db.products,db.stocks,db.sales,db.settings],()=>Promise.all([
         db.products.toArray(),localStock(db),org && b
           ? readLocalSales(db,{organizationId:org,branchId:b,cashierId:role === "owner" ? undefined : user},localHistoryLimit)
-          : db.sales.where("status").anyOf(unresolvedStates).count().then(allPendingCount=>({sales:[],allPendingCount,hasOlder:false})),
+          : db.sales.where("status").anyOf(unresolvedStates).count().then(allPendingCount=>({sales:[],allPendingCount,branchPendingCount:0,hasOlder:false})),
         pendingOperations(db),setting<string>(db,"lastSync"),setting<string>(db,"snapshotAsOf"),
       ]),
     );
@@ -328,6 +330,7 @@ export function StoreApp() {
     setStock(nextStock);
     setSales(local.sales);
     setAllPendingCount(local.allPendingCount);
+    setBranchPendingCount(local.branchPendingCount);
     setHasOlderLocal(local.hasOlder);
     setAllOperationCount(allOperations.length);
     setOperations(
@@ -481,7 +484,16 @@ export function StoreApp() {
             const b = await fetchBranches(m.organizationId);
             if (!current()) return;
             setBranchList(b);
-            const target = saved?.branchId ?? resumeBranch(m, b, cachedScope) ?? m.branchId ?? b[0]?.id;
+            const savedBranchEnabled = !saved || b.some(branch => branch.id === saved.branchId);
+            const retiredCachedBranch = cachedScope?.organizationId === m.organizationId && !b.some(branch => branch.id === cachedScope.branchId);
+            if (!savedBranchEnabled || (!saved && retiredCachedBranch)) {
+              // Retire authorization only; preserve all original sale/request evidence.
+              const deviceId = await setting<string>(db, "deviceId");
+              if (deviceId) await forgetRetiredDevice(db, deviceId);
+              else await db.settings.delete("lease");
+              setLease(undefined);
+            }
+            const target = (savedBranchEnabled ? saved?.branchId : undefined) ?? resumeBranch(m, b, cachedScope) ?? (m.role === "owner" ? b[0]?.id : b.find(branch => branch.id === m.branchId)?.id);
             setBranchId(target ?? "");
             await db.transaction("rw",db.settings,async()=>{
               if (!current()) return;
@@ -495,7 +507,7 @@ export function StoreApp() {
                 await requestSnapshot(db, {
                   organizationId: m.organizationId,
                   branchId: target,
-                  deviceId: saved?.deviceId,
+                  deviceId: savedBranchEnabled ? saved?.deviceId : undefined,
                   transactionIds: (
                     await db.sales.where("status").anyOf(unresolvedStates).toArray()
                   ).map((s) => s.id),
@@ -1215,6 +1227,7 @@ export function StoreApp() {
         </a>
         <nav aria-label="Main navigation">
           {navigation
+            .filter(n => !branchLocked || n.id !== "transfers")
             .filter(
               (n) => !isStock || !["pos", "overview", "sales"].includes(n.id),
             )
@@ -1289,7 +1302,7 @@ export function StoreApp() {
             <span className="branch-icon">
               <Sprout size={18} />
             </span>
-            <select
+            {branchLocked ? <strong aria-label="Current branch">{selectedBranch?.name ?? "Reconnect to load your branch"}</strong> : <><select
               aria-label="Current branch"
               value={branchId}
               disabled={!!lease || busy || (!online && !practice)}
@@ -1333,7 +1346,7 @@ export function StoreApp() {
                   </option>
                 ))}
             </select>
-            <ChevronDown size={14} />
+            <ChevronDown size={14} /></>}
           </div>
           <div className="topbar-right">
             <span className={`connection ${online ? "" : "offline"}`}>
@@ -1858,7 +1871,7 @@ export function StoreApp() {
                   <Button variant="outline" onClick={() => setView("inventory")}>Open stock controls</Button>
                 </section>
               </div>
-              {!practice && (isOwner || member.role === "manager") && <StockLossReport key={`loss-report:${member.organizationId}:${branchId}`} db={db} organizationId={member.organizationId} branchId={branchId} branchName={selectedBranch?.name ?? "Selected branch"} actorId={member.userId} products={products} owner={isOwner} online={online} disabled={busy} revision={historyRevision} execute={fn => run(fn,true,true)} />}
+              {!practice && (isOwner || member.role === "manager") && <StockLossReport singleBranch={branchLocked} key={`loss-report:${member.organizationId}:${branchId}`} db={db} organizationId={member.organizationId} branchId={branchId} branchName={selectedBranch?.name ?? "Selected branch"} actorId={member.userId} products={products} owner={isOwner} online={online} disabled={busy} revision={historyRevision} execute={fn => run(fn,true,true)} />}
               <section className="panel">
                 <h2>Cash reconciliation</h2>
                 {(cloud.cashier_shifts ?? []).length ? (
@@ -3041,7 +3054,7 @@ export function StoreApp() {
                         </div>
                         <div>
                           <dt>Unconfirmed local sales</dt>
-                          <dd>{allPendingCount}</dd>
+                          <dd>{branchPendingCount}</dd>
                         </div>
                       </dl>
                       <Button
@@ -3070,7 +3083,7 @@ export function StoreApp() {
                           void run(async () => {
                             if (useCart.getState().items.length)
                               throw new Error("Finish or remove the unfinished basket before closing the shift. No sale has been saved for that basket.");
-                            if (pending.length)
+                            if (branchPendingCount)
                               throw new Error(
                                 "Synchronize every saved sale before closing the shift.",
                               );
@@ -3097,7 +3110,7 @@ export function StoreApp() {
                         </Field>
                         <Button
                           disabled={
-                            !online || busy || practice || allPendingCount > 0 || operations.length > 0 || cart.items.length > 0
+                            !online || busy || practice || branchPendingCount > 0 || operations.length > 0 || cart.items.length > 0
                           }
                         >
                           Reconcile & close shift
@@ -3453,7 +3466,7 @@ export function StoreApp() {
                     )}
                   </section>
                   <section className="panel">
-                    <h2>Branches</h2>
+                    {branchLocked ? <><h2>Branch</h2><p><strong>{selectedBranch?.name}</strong></p><p className="muted">This store is configured for one branch. Contact your service provider for changes to the branch setup.</p></> : <><h2>Branches</h2>
                     <p className="muted">
                       Rename your stores or add another branch as your business
                       grows.
@@ -3584,6 +3597,7 @@ export function StoreApp() {
                       Branch codes are assigned automatically. Adding a branch
                       requires an internet connection.
                     </p>
+                    </>}
                   </section>
                 </>
               )}

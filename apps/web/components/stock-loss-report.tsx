@@ -52,9 +52,10 @@ function CostEvidenceFields({units,row,hint}:{units:PurchaseCostUnit[];row:LossR
 }
 
 type Filters = { fromDate: string; throughDate: string; filter: string; allBranches: boolean };
-export function StockLossReport({ db, organizationId, branchId, branchName, actorId, products, owner, online, disabled, revision, execute }: {
+export function StockLossReport({ db, organizationId, branchId, branchName, actorId, products, owner, online, disabled, revision, execute, singleBranch = false }: {
   db: PosDatabase; organizationId: string; branchId: string; branchName: string; actorId: string; products: Product[];
   owner: boolean; online: boolean; disabled: boolean; revision: number; execute: (fn: () => Promise<void>) => Promise<Error | undefined>;
+  singleBranch?: boolean;
 }) {
   const [draft, setDraft] = useState<Filters>(() => { const today = businessDay(); return { fromDate: today.slice(0, 7) + "-01", throughDate: today, filter: "loss", allBranches: false }; });
   const [filters, setFilters] = useState(draft), [data, setData] = useState<LossReport>(), [loading, setLoading] = useState(false), [error, setError] = useState(""), [feedback, setFeedback] = useState("");
@@ -95,7 +96,7 @@ export function StockLossReport({ db, organizationId, branchId, branchName, acto
         <label className="field"><span>Loss report from date</span><input type="date" value={draft.fromDate} onChange={e => setDraft({ ...draft, fromDate: e.target.value })} /></label>
         <label className="field"><span>Loss report through date</span><input type="date" value={draft.throughDate} onChange={e => setDraft({ ...draft, throughDate: e.target.value })} /></label>
         <label className="field"><span id={`${id}-category`}>Removal category</span><select aria-labelledby={`${id}-category`} value={draft.filter} onChange={e => setDraft({ ...draft, filter: e.target.value })}><option value="loss">Posted losses / write-offs</option><option value="other_removal">Authorised use / supplier returns</option><option value="all">All recorded removals</option></select></label>
-        {owner && <label className="checkbox"><input type="checkbox" checked={draft.allBranches} onChange={e => setDraft({ ...draft, allBranches: e.target.checked })} />Report all branches</label>}
+        {owner && !singleBranch && <label className="checkbox"><input type="checkbox" checked={draft.allBranches} onChange={e => setDraft({ ...draft, allBranches: e.target.checked })} />Report all branches</label>}
         <Button disabled={blocked}>Apply loss-report filters</Button>
       </form>
       {feedback && <p className="notice success" role="status">{feedback}</p>}

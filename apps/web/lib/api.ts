@@ -75,8 +75,9 @@ export async function memberships(): Promise<Membership[]> {
 export async function branches(org: string): Promise<Branch[]> {
   const { data, error } = await supabase
     .from("branches")
-    .select("id,name,code")
+    .select("id,name,code,managementLocked:management_locked")
     .eq("organization_id", org)
+    .eq("active", true)
     .order("code");
   if (error) throw new Error(error.message);
   return data ?? [];

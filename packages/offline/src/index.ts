@@ -400,17 +400,19 @@ function scopedSales(db: PosDatabase, scope: RecoveryScope) {
 }
 export async function readLocalSales(db: PosDatabase, scope: RecoveryScope, limit = 50) {
   if (!Number.isInteger(limit) || limit < 1 || limit > 10000) throw new Error("Load between 1 and 10000 recent records");
-  const [recent, unresolved, total, allPendingCount] = await Promise.all([
+  const [recent, unresolved, total, allPendingCount, branchPendingCount] = await Promise.all([
     scopedSales(db, scope).reverse().limit(limit).toArray(),
     db.sales.where("status").anyOf(unresolvedStates).filter(s =>
       s.payload.organizationId === scope.organizationId && s.payload.branchId === scope.branchId &&
       (!scope.cashierId || s.payload.cashierId === scope.cashierId)).toArray(),
     scopedSales(db, scope).count(),
     db.sales.where("status").anyOf(unresolvedStates).count(),
+    db.sales.where("status").anyOf(unresolvedStates).filter(s =>
+      s.payload.organizationId === scope.organizationId && s.payload.branchId === scope.branchId).count(),
   ]);
   return { sales: [...new Map([...recent, ...unresolved].map(s => [s.id, s])).values()]
     .sort((a,b) => b.payload.occurredAt.localeCompare(a.payload.occurredAt) || b.id.localeCompare(a.id)),
-    total, allPendingCount, hasOlder: total > recent.length };
+    total, allPendingCount, branchPendingCount, hasOlder: total > recent.length };
 }
 
 export const recoveryOperationIds: Record<string, string> = {

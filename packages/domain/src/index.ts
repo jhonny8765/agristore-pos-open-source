@@ -95,6 +95,7 @@ export interface Branch {
   id: string;
   name: string;
   code: string;
+  managementLocked?: boolean;
 }
 export interface Membership {
   organizationId: string;
