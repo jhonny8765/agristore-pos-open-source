@@ -1,5 +1,11 @@
 # Verification evidence
 
+## Fixed-branch Magpet rehearsal — November 1, 2026
+
+The [final gate 41282982496](https://github.com/jhonny8765/agristore-pos-open-source/actions/runs/41282982496), source `ed0d86086476214853ec8adf102a97e8a2519088`, passed 381 unit tests, 838 pgTAP assertions, type/lint/build/database lint, the encrypted 40-table functional restore, 25 practice-browser scenarios, 55 general genuine Supabase/Auth scenarios and 31 additional fixed-Magpet runs (thirty repeated workflows plus the new 300-sale cashier case). Every original sale/payload, payment, stock movement and final drawer balance matched; lost committed response and recovery replay produced no duplicate effects. The fresh [capacity rehearsal](https://github.com/jhonny8765/agristore-pos-open-source/actions/runs/41282692017) also passed with final 548,515 sales/payments, 1,096,015 sale movements and zero projection differences.
+
+Read [the detailed scope, initial observer-fixture failure and final evidence](docs/magpet-pilot-verification.md). Use [the store worksheet](docs/magpet-store-test.md) for actual Windows/browser storage, elapsed outage/restart/eight-hour, scales/printer, opening data, individual staff and production-backup acceptance. Another branch stays locked until owner acceptance of the Magpet pilot. Synthetic software tests do not complete those operational gates.
+
 ## Selected-quantity cash refunds
 
 October 27, 2026. Source `cca8b93` passed both jobs of [40421442302](https://github.com/jhonny8765/agristore-pos-open-source/actions/runs/40421442302): **206 unit tests, 22 practice-browser scenarios, 30 genuine Supabase/Auth browser scenarios, 559 pgTAP assertions, warning-failing database lint, type checks, application lint, optimized builds and a 38-table dump/restore**. All previous checks remained enabled.

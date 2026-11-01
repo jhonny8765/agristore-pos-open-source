@@ -50,7 +50,9 @@ The supplementary database preflight uses actual PostgreSQL/pgTAP through PGlite
 
 The Verify AgriStore workflow runs the complete disposable Supabase tests and real database-connected browser scenarios on standard Ubuntu runners. No hosted credentials are needed. The integration and cloud-style dump/restore scripts intentionally require the disposable Linux CI stack and refuse hosted projects. A separate manually runnable capacity workflow tests a five-branch annual fixture. Test timing and synthetic capacity do not certify a particular production environment.
 
-Standard GitHub-hosted runner minutes for public repositories are free under [GitHub's published policy](https://docs.github.com/en/billing/concepts/product-billing/github-actions). These workflows use standard Ubuntu runners and no artifact uploads. Hosting, backups and larger runners have separate conditions and are not purchased or enabled by this repository.
+The workflow also runs `npm run test:magpet` immediately after the general integration build. It repeats thirty supported workflows with one active management-locked branch and adds a 300-sale real-cashier offline/recovery/cash-and-stock rehearsal. The opt-in fixture requires the exact disposable Linux/loopback stack; never adapt it to an existing hosted business. See [the verified results](docs/magpet-pilot-verification.md) and [the actual-store worksheet](docs/magpet-store-test.md).
+
+Standard GitHub-hosted runner minutes for public repositories are free under [GitHub's published policy](https://docs.github.com/en/billing/concepts/product-billing/github-actions). These workflows use standard Ubuntu runners. The database job retains synthetic review PNGs for three days; authenticated traces, network archives, credentials and business backups are not uploaded. Hosting, backups and larger runners have separate conditions and are not purchased or enabled by this repository.
 
 ## Contribute and report problems
 
