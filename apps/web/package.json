@@ -29,5 +29,8 @@
     "@tailwindcss/postcss": "4.3.3",
     "workbox-build": "7.4.1"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "engines": {
+    "node": "24.x"
+  }
 }
