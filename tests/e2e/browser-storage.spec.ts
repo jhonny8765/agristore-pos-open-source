@@ -35,6 +35,10 @@ test("storage requests are explicit and denied/failed checks retain pending rece
   await panel.getByRole("button", { name: "Check storage protection", exact: true }).click();
   await expect(panel).toContainText("The protection request failed");
   expect(await records()).toEqual(before);
+  await panel.screenshot({ path: ".impeccable/review/storage-test-denied-desktop.png" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await panel.screenshot({ path: ".impeccable/review/storage-test-denied-mobile.png" });
+  expect(await panel.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
   await page.reload(); await page.getByRole("button", { name: "Settings", exact: true }).click();
   expect(await records()).toEqual(before);
   await expect(panel).toContainText("Never clear browsing data");

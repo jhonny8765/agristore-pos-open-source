@@ -1451,6 +1451,11 @@ form > .button {
 .approval-fields { border: 0; padding: 0; margin: 0; min-width: 0; }
 .stock-evidence { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; max-width: 55ch; }
 .storage-health { margin-block: 16px; }
+.storage-health p { margin-block: 12px; max-width: 72ch; overflow-wrap: anywhere; }
+.storage-health ol { list-style: decimal; padding-inline-start: 22px; margin-block: 16px; }
+.storage-health li + li { margin-block-start: 12px; }
+.storage-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.storage-actions .button { max-width: 100%; white-space: normal; }
 
 /* Operational stock context must stay with its approval at narrow widths. */
 .stock-control-table table { table-layout: fixed; white-space: normal; }

@@ -29,8 +29,10 @@ export function StorageHealth({ appInstall, appName = "AgriStore" }: { appInstal
   },[read]);
   return <div className="storage-health" role="region" aria-label="Browser storage protection">
     <p role="status">{reading ? storageDescription(reading) : "Checking this browser's storage…"}</p>
-    <Button variant="outline" disabled={busy} onClick={() => void read(true)}>{busy ? "Checking storage…" : "Check storage protection"}</Button>
-    {appInstall.available && <Button variant="outline" onClick={() => void appInstall.install()}>Install {appName} on this PC</Button>}
+    <div className="storage-actions">
+      <Button variant="outline" disabled={busy} onClick={() => void read(true)}>{busy ? "Checking storage…" : "Check storage protection"}</Button>
+      {appInstall.available && <Button variant="outline" onClick={() => void appInstall.install()}>Install {appName} on this PC</Button>}
+    </div>
     {appInstall.message && <p role="status">{appInstall.message}</p>}
     <p className="muted">This check applies only to {host || "this website"} in this browser profile. An app installed from the old website does not protect this website’s records.</p>
     {reading?.persistent !== true && <ol>
