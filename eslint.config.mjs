@@ -13,6 +13,9 @@ export default defineConfig([
     "playwright-report/**",
     "test-results/**",
     ".impeccable/review/**",
+    "cloudflare-output/**",
+    ".cloudflare-build-*/**",
+    ".wrangler/**",
   ]),
   {
     settings: { next: { rootDir: "apps/web/" } },

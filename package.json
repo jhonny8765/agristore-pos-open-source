@@ -26,10 +26,14 @@
     "db:reset": "supabase db reset",
     "check": "npm run typecheck && npm run lint && npm test && npm run build",
     "audit:production": "npm audit --omit=dev --audit-level=low --fetch-retries=0 --fetch-timeout=30000",
-    "audit:dependencies": "npm audit --audit-level=high --fetch-retries=0 --fetch-timeout=30000"
+    "audit:dependencies": "npm audit --audit-level=high --fetch-retries=0 --fetch-timeout=30000",
+    "build:cloudflare": "node scripts/build-cloudflare.mjs",
+    "preview:cloudflare": "wrangler pages dev cloudflare-output/site --ip 127.0.0.1 --port 3100 --compatibility-date 2026-11-02 --show-interactive-dev-session=false"
   },
   "overrides": {
-    "workbox-build": { "glob": "14.0.3" },
+    "workbox-build": {
+      "glob": "14.0.3"
+    },
     "minimatch@>=9.0.0 <11.0.1": "11.0.1"
   },
   "engines": {
@@ -47,9 +51,11 @@
     "eslint": "9.39.2",
     "eslint-config-next": "16.4.3",
     "fake-indexeddb": "6.2.5",
+    "fflate": "0.8.3",
     "supabase": "2.121.0",
     "typescript": "6.0.2",
     "vitest": "5.0.5",
-    "workbox-build": "7.4.1"
+    "workbox-build": "7.4.1",
+    "wrangler": "4.156.1"
   }
 }

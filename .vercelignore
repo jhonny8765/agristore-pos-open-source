@@ -7,3 +7,6 @@ test-results/
 playwright-report/
 coverage/
 *.tsbuildinfo
+cloudflare-output/
+.cloudflare-build-*/
+.wrangler/

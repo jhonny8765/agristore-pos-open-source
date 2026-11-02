@@ -4,7 +4,7 @@ const config: NextConfig = {
   transpilePackages: ["@agristore/domain", "@agristore/offline"],
   poweredByHeader: false,
   // Public build identity only; never include service credentials here.
-  env: { NEXT_PUBLIC_APP_RELEASE: process.env.VERCEL_URL ?? process.env.VERCEL_GIT_COMMIT_SHA ?? "local-build" },
+  env: { NEXT_PUBLIC_APP_RELEASE: process.env.NEXT_PUBLIC_APP_RELEASE ?? process.env.VERCEL_URL ?? process.env.VERCEL_GIT_COMMIT_SHA ?? "local-build" },
   compiler: {
     runAfterProductionCompile: async ({ distDir, projectDir }) => {
       const { buildOffline } = await import("./scripts/build-sw.mjs");
@@ -34,4 +34,10 @@ const config: NextConfig = {
     ];
   },
 };
+// Pages serves the exported shell; the live health check is a separate Worker.
+// The export runner copies this app into an isolated directory first.
+if (process.env.AGRISTORE_CLOUDFLARE_BUILD === "1") {
+  config.output = "export";
+  delete config.headers;
+}
 export default config;

@@ -1,0 +1,87 @@
+name: Verify Cloudflare hosting
+on:
+  workflow_dispatch:
+env:
+  AGRISTORE_HOSTING_TARGET: cloudflare
+  WRANGLER_SEND_METRICS: "false"
+permissions:
+  contents: read
+jobs:
+  application:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - run: npm run audit:production
+      - run: npm run audit:dependencies
+      - run: npm run typecheck
+      - run: npm run lint -- --max-warnings=0
+      - run: npm test
+      - run: npm run build:cloudflare -- --practice
+      - name: Install test browser
+        run: bash scripts/install-test-browser.sh
+        timeout-minutes: 6
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        continue-on-error: true
+        with:
+          name: browser-test-results
+          retention-days: 3
+          path: |
+            playwright-report/
+            test-results/
+  database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - run: npx supabase start -x realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+      - run: npx supabase db lint --local --level warning --fail-on warning
+      - run: npm run test:db
+      - run: npm run test:restore
+      - name: Install test browser
+        run: bash scripts/install-test-browser.sh
+        timeout-minutes: 6
+      - run: npm run test:integration
+      - name: Test enabled workflows with the fixed Magpet branch setup
+        run: npm run test:magpet
+      - name: Save synthetic interface review captures
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        continue-on-error: true
+        with:
+          name: product-setup-review
+          path: |
+            test-results/product-setup-*.png
+            test-results/stock-history-*.png
+            test-results/stock-controls-*.png
+            test-results/blind-counts-*.png
+            test-results/single-branch-*.png
+            test-results/measured-*.png
+            test-results/count-recovery-*.png
+            test-results/sales-analytics-*.png
+          retention-days: 3
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: integration-failure-screenshots
+          path: test-results/**/*.png
+          retention-days: 3
+        continue-on-error: true
+      - run: npx supabase stop --no-backup
+        if: always()

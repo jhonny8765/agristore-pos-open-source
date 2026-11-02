@@ -31,7 +31,7 @@ const env = {
 // The web build and test process receive only the public API key. All other
 // status fields, including local administrative credentials, stay unused.
 for (const [command, args] of [
-  ["npm", ["run", "build"]],
+  ["npm", ["run", process.env.AGRISTORE_HOSTING_TARGET === "cloudflare" ? "build:cloudflare" : "build"]],
   ["npx", ["playwright", "test", "--config=playwright.integration.config.ts"]],
 ]) {
   const result = spawnSync(command, args, { env, stdio: "inherit" });

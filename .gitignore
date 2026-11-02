@@ -18,6 +18,9 @@ apps/web/public/offline.html
 .impeccable/review/
 *.tsbuildinfo
 *.log
+cloudflare-output/
+.cloudflare-build-*/
+.wrangler/
 
 .vercel
 .env*

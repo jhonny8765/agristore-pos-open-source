@@ -23,7 +23,7 @@ export default defineConfig({
     screenshot: "only-on-failure",
   },
   webServer: {
-    command: "npm run start -w @agristore/web -- --port 3100",
+    command: process.env.AGRISTORE_HOSTING_TARGET === "cloudflare" ? "npm run preview:cloudflare" : "npm run start -w @agristore/web -- --port 3100",
     url: "http://127.0.0.1:3100",
     reuseExistingServer: false,
     timeout: 120_000,
