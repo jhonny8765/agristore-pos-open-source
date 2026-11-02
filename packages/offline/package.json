@@ -5,7 +5,7 @@
   "main": "src/index.ts",
   "dependencies": {
     "@agristore/domain": "0.1.0",
-    "dexie": "4.4.6"
+    "dexie": "4.4.7"
   },
   "license": "MIT"
 }
