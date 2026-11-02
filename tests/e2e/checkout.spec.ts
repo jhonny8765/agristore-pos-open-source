@@ -1,5 +1,5 @@
 import { test, expect, chromium, type Page } from "@playwright/test";
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, realpath } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 async function practice(page: Page) {
@@ -203,7 +203,10 @@ test("real browser process restart retains the local outbox", async () => {
     await expect(page.locator("tbody tr")).toHaveCount(1);
   } finally {
     await context.close();
-    await rm(directory, { recursive: true, force: true });
+    const actual = await realpath(directory);
+    const temporaryRoot = await realpath(tmpdir());
+    if (path.dirname(actual).toLowerCase() !== temporaryRoot.toLowerCase() || !path.basename(actual).startsWith("agri-browser-")) throw new Error("Unexpected browser test directory.");
+    await rm(actual, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
   }
 });
 test("desktop and mobile inspection captures with no horizontal page overflow", async ({
