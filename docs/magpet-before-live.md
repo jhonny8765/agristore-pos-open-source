@@ -14,7 +14,7 @@ Create and verify individual staff accounts, then assign only their real roles. 
 
 ## 2. Choose the live hosting and backup setup
 
-The current website is on Vercel Hobby, which is restricted to personal, non-commercial use. Choose hosting that permits the intended business use before Magpet goes live. Calling an address "staging" does not determine its eligibility. No purchase or upgrade has been made. A no-payment alternative needs its own account access, compatibility/limit checks and the complete cashier/offline test gate before cutover; changing the address alone is not sufficient.
+The existing staging website is on Vercel Hobby, which is restricted to personal, non-commercial use. The [Cloudflare Pages Free alternative](cloudflare-hosting.md) is now implemented, with a separate build/verification workflow and account/upload instructions. Publication, public URL/health, staff access, invitations/reset redirects and monitoring must be verified before any cashier cutover. No purchase or upgrade is required for the prepared Free-plan setup. Calling an address "staging" does not determine its eligibility.
 
 Choose a place for encrypted database backups outside the cashier PC, who runs/checks them, how often they run and how much recent work the store can afford to re-enter after an incident. Then restore an **actual live-project backup** into an isolated test environment and check sales, cash, stock and access. The passing disposable test restore does not prove this has happened. Browser recovery JSON protects unresolved sales; it is not a complete database backup. Keep encryption keys separately and private.
 

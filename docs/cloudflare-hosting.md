@@ -19,6 +19,8 @@ An explicit `npm run build:cloudflare -- --practice` creates an unconnected rehe
 
 ## Upload the connected build
 
+If the project already exists, open it under Workers & Pages and choose **Create deployment**, or continue the upload page already open. Do not create a second project just to upload the ZIP. For this Magpet setup, the prepared project is **better-yield-magpet-pos**.
+
 1. Sign in to Cloudflare and open **Compute → Workers & Pages → Create application**.
 2. Choose **Continue to Pages**. If Cloudflare calls this the legacy workflow, choose that Pages option for this prepared artifact; the separate Workers static-upload wizard is a different deployment path.
 3. Choose **Drag and drop your files → Get started**.
@@ -27,6 +29,8 @@ An explicit `npm run build:cloudflare -- --practice` creates an unconnected rehe
 6. Choose **Deploy site**. Wait for success, then open its permanent `https://…pages.dev` address.
 7. Check `/api/health`: it must return HTTP 200 with `service: agristore-pos`, `status: ok` and a current `checkedAt`. An HTML sign-in/protection page, stale JSON or frozen healthy file is not a passing check.
 8. Verify sign-in, permitted Magpet access, local practice cash/weight flows, installability and offline reload. Review the completed automated platform gate before designating the address for store use.
+
+For later releases, run **GitHub → Actions → Verify Cloudflare hosting → Run workflow** against the exact source being uploaded. See [the completed hosting verification](cloudflare-verification.md) for this release's results and remaining launch gates.
 
 Dashboard ZIP uploads support this advanced-mode Worker. `/api/health` and three explicit denials for deployment control files invoke it; ordinary pages/assets bypass Functions. The denials return 404 consistently even where the local asset emulator mishandles those reserved filenames. Static security headers come from `_headers`, and the Worker separately applies the same policy. The Worker uses manual redirects, which Cloudflare supports, and rejects redirected/unavailable backend responses without following them. Health responses are never cached.
 

@@ -1,0 +1,29 @@
+# Cloudflare hosting verification — November 2, 2026
+
+The [Cloudflare platform gate](https://github.com/jhonny8765/agristore-pos-open-source/actions/runs/41366061872) passed on public source `b28f8bc`: **463 unit tests in 32 files, 1,172 pgTAP assertions in 21 files, 27 practice/platform browser tests, 60 genuine Supabase/Auth browser cases and 35 fixed-Magpet browser runs**. The 122 browser executions include selected scenarios repeated under the Magpet configuration. Strict type/lint/build/database lint, dependency gates and the encrypted 40-table functional restore passed.
+
+The [existing-platform regression gate](https://github.com/jhonny8765/agristore-pos-open-source/actions/runs/41366060535) passed on the same source. Cloudflare-only cases are skipped there; the existing Next hosting build and business behavior remain supported.
+
+## What changed and was tested
+
+- The existing client application can be exported for Pages, with a tiny separately bundled health Worker. The original Next API route is left intact; a temporary app copy omits that known route for export. Unexpected new server routes block the export for review.
+- The build rejects missing/partial backend configuration and privileged/unrecognized API keys. Explicit empty practice builds fail health checks with 503. The connected Worker checks the actual read-only database RPC on each GET/HEAD request, returns 200 only for a true response, rejects other methods, never follows redirects and emits no backend credentials in responses.
+- Testing caught Cloudflare's unsupported `redirect: error` request mode. The adapter now uses manual redirects and rejects non-success responses. This was verified in the actual Workerd emulator against both a disposable database and the selected hosted database's read-only health RPC.
+- Reserved deployment filenames now return explicit 404 responses. This also avoids a Linux emulator error that returned 502 for an asset probe. Ordinary application/assets requests bypass Functions; only health and the three explicit deployment-file denials invoke the Worker.
+- Static assets and Worker responses retain the browser security policy. The service worker is served with no-store caching. Application updates, rollback, multiple windows, pending-sale protection and offline browser-process recovery passed on the new serving path.
+- The upload ZIP was unpacked and verified: required files, route map, release identity, SHA-256, no source/environment/source-map files, no private deployment credentials and no business/recovery records. The preview starts in its own generated directory with an empty credential file, rather than loading the repository's Vercel environment. An active preview blocks rebuilding and preserves the verified ZIP. Stale process locks are checked before recovery.
+- Windows testing exposed a locked browser debug log during temporary-profile cleanup. Cleanup now verifies the temporary directory and permits bounded filesystem retries. All 26 existing branded cashier browser cases passed locally on the final connected private build, alongside its packaging/health checks. All 463 unit tests passed locally with two test workers; a heavily parallel local run had exceeded the existing five-second synthetic 200-sale test limit, without failing its business assertions.
+
+## Stock, cash, reports and recovery
+
+The new serving path passed the existing real-Auth stock and financial checks: quarter/half kilos, grams and peso requests; meter/ml purchasing, transfers, counts, refunds, damage/held goods and cost-based losses; rejected deliveries and immutable corrections; partial refunds and refund corrections; blind counts with independent counters/approval; organization/branch isolation; lost responses; revoked access; and independently reconciled sales analytics.
+
+The Magpet rehearsal preserved **300 distinct original offline transactions**, **262,500 centavos in payments**, **75 kg sold**, **925 kg remaining**, and a closed drawer of **272,500 centavos including its opening float**. A committed upload with a lost response and recovery-file replay created no duplicate sale/payment/stock effect. These are synthetic data and simulated outage conditions, not actual store trading or physical hardware certification.
+
+## Publication and launch boundary
+
+**Prepared and tested; dashboard upload is still required.** Windows browser control stopped because it could not reliably determine the active browser URL. No further browser inputs were issued after that stop. The new public address was not serving the POS when checked. The selected hosted database was used only for the read-only health probe; this hosting work did not write business records or change schema/Auth policy.
+
+The existing staging deployment and database-only availability monitor were retained. After upload, verify the actual public URL, live dynamic health response, legitimate staff sign-in, invitation/reset redirects, PWA installation and storage on the new origin. Only then change website monitoring or plan cashier cutover. Pending records must be synchronized/exported first; storage does not move between origins automatically.
+
+The Cloudflare account/upload procedure is in [Free hosting for Magpet](cloudflare-hosting.md). No paid plan, domain, API credential or production cutover was created by this work. The actual PC's elapsed outage/eight-hour/Windows-restart checks, opening stock/costs, individual staff, scale/printer, live-project backup restore and pilot sign-off remain open. Production dependency advisories are zero; 22 low/moderate build-tool findings remain as previously documented. Free hosting/database limits still apply.

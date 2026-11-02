@@ -1,5 +1,9 @@
 # Verification evidence
 
+## Cloudflare Pages Free hosting — November 2, 2026
+
+[Cloudflare gate 41366061872](https://github.com/jhonny8765/agristore-pos-open-source/actions/runs/41366061872), source `b28f8bc`, passed **463 unit checks, 1,172 database assertions, 27 practice/platform browser cases, 60 genuine Supabase/Auth cases, 35 fixed-Magpet runs** and the encrypted 40-table functional restore. The [existing-platform gate 41366060535](https://github.com/jhonny8765/agristore-pos-open-source/actions/runs/41366060535) also passed. The 122 Cloudflare browser executions include repeated selected cases under the branch lock. The 300-sale offline/lost-response/recovery/drawer rehearsal matched original UUIDs and exact cash/stock. See [the hosting verification](docs/cloudflare-verification.md) and [account/upload guide](docs/cloudflare-hosting.md). This qualifies the build and local serving path; the public deployment/upload, legitimate hosted sign-in, new-origin storage/cutover, full website monitoring and actual-store acceptance remain pending.
+
 ## Free security and maintenance — November 2, 2026
 
 [Full gate 41359448977](https://github.com/jhonny8765/agristore-pos-open-source/actions/runs/41359448977), source `493b4ebc690ee77377f8ca45a719f0988a291df7`, passed **446 unit tests, 1,172 pgTAP assertions, 26 practice-browser tests, 59 general genuine Supabase/Auth cases, 35 fixed-Magpet runs**, strict type/lint/build/database lint, dependency gates and the encrypted 40-table restore. Browser checks include an actually blocked foreign script followed by a saved cash sale; database checks prove real sealed observations remain private even after a temporary accidental broad grant/policy, while authorized commands still work. Existing offline/recovery, stock/refund, analytics and app-update regressions pass together. The 120 browser executions include repeated supported cases under the branch lock.
