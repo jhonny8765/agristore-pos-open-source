@@ -5,6 +5,7 @@ import {operatingChecks,readOperatingStatus,type BrowserStorageStatus,type Local
 import {storeScenarios} from "../lib/store-scenarios";
 import {supportReport} from "../lib/support-report";
 import {Button} from "./ui/button";
+import {readBrowserStorage} from "../lib/browser-storage";
 
 export function OperatingGuide({db,scope,branchName,online,cached,practice,disabled,onRefreshCatalog,onSync}:{db:PosDatabase;scope:OperatingScope;branchName:string;online:boolean;cached:boolean;practice:boolean;disabled:boolean;onRefreshCatalog:()=>Promise<unknown>;onSync:()=>void}){
  const [local,setLocal]=useState<LocalOperatingStatus>();const [storage,setStorage]=useState<BrowserStorageStatus>({});
@@ -15,7 +16,7 @@ export function OperatingGuide({db,scope,branchName,online,cached,practice,disab
  const invalidate=useCallback(()=>{generation.current++;active.current=false;},[]);
  const read=useCallback(async()=>{
   if(!active.current)return;const request=++generation.current;setBusy(true);
-  const [records,space]=await Promise.allSettled([readOperatingStatus(db,{organizationId,branchId,actorId,role}),(async()=>{if(!navigator.storage)return {};const [persistent,estimate]=await Promise.all([navigator.storage.persisted?.(),navigator.storage.estimate()]);return {persistent,...estimate};})()]);
+  const [records,space]=await Promise.allSettled([readOperatingStatus(db,{organizationId,branchId,actorId,role}),readBrowserStorage(navigator.storage)]);
   if(request!==generation.current)return;
   if(records.status==="fulfilled"){setLocal(records.value);setError("");}else{setLocal(undefined);setError("Local records could not be checked. Do not begin checkout until this is resolved. Keep this profile and site data, preserve recovery evidence and ask the maintainer for help.");}
   const observedStorage=space.status==="fulfilled"?space.value:{};
