@@ -14,13 +14,13 @@ Create and verify individual staff accounts, then assign only their real roles. 
 
 ## 2. Choose the live hosting and backup setup
 
-The existing staging website is on Vercel Hobby, which is restricted to personal, non-commercial use. The [Cloudflare Pages Free alternative](cloudflare-hosting.md) is now implemented, with a separate build/verification workflow and account/upload instructions. Publication, public URL/health, staff access, invitations/reset redirects and monitoring must be verified before any cashier cutover. No purchase or upgrade is required for the prepared Free-plan setup. Calling an address "staging" does not determine its eligibility.
+The [Cloudflare Pages Free site](cloudflare-hosting.md) is published at <https://better-yield-magpet-pos.pages.dev/>. The [actual signed-in TEST rehearsal](cloudflare-published-verification.md) verified sales, refunds/correction, stock, weekly/monthly reports, update retention and website/database health. An old closed TEST-PC registration was retired through the audited owner workflow before registering this browser; old records remain retained. The actual cashier PC/profile still needs its own authorized replacement/installation and protected-storage checks, and legitimate staff invitations/reset redirects still need verification. The old Vercel Hobby site remains staging; no paid upgrade was made.
 
 Choose a place for encrypted database backups outside the cashier PC, who runs/checks them, how often they run and how much recent work the store can afford to re-enter after an incident. Then restore an **actual live-project backup** into an isolated test environment and check sales, cash, stock and access. The passing disposable test restore does not prove this has happened. Browser recovery JSON protects unresolved sales; it is not a complete database backup. Keep encryption keys separately and private.
 
 Assign someone to check hosting/database usage and account notices at least weekly during the pilot. Free services have limits and pause/restriction rules; the capacity test is not a certificate that a free plan can run indefinitely. Keep all business history while planning capacity changes.
 
-Confirm failure alerts reach the maintainer. The current monitor checks the database only. Before live use, also test that the selected website and its database health check are covered; a database-only success does not prove the cashier website opens.
+The monitor now checks the published website and its live database probe. [The post-update check](https://github.com/jhonny8765/agristore-pos-open-source/actions/runs/41370839599) passed; existing failure emails are retained. GitHub schedules may be delayed, and independent missed-monitor detection remains open. Keep verifying that alerts still reach the maintainer.
 
 At any domain change, synchronize/export every unresolved record first. Browser storage belongs to each website origin. Do not clear the old profile or assume its pending records automatically move to the new address. The maintainer must verify the cutover and recovery process.
 

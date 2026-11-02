@@ -1,5 +1,7 @@
 # Free hosting for Magpet
 
+**Published and checked:** <https://better-yield-magpet-pos.pages.dev/>. Read the [actual signed-in sales/stock rehearsal](cloudflare-published-verification.md), including refunds, weekly/monthly reports, the corrected PC-registration message and the remaining storage/hardware gates. Website-and-database monitoring is enabled. No further upload is needed for this release.
+
 This release supports Cloudflare Pages Free for the cash-only POS. It exports the existing Next.js application shell and keeps all authorized sales, cash and stock operations in Supabase. A small Pages Worker implements the live `/api/health` check. This is a hosting change, not a second stock database.
 
 ## Accounts
