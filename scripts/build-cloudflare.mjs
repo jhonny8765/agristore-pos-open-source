@@ -12,10 +12,17 @@ const backend=publicBackend(process.env,process.argv.includes("--practice"));
 const release=`cf-${Date.now().toString(36)}`;
 const marker="agristore-cloudflare-build-v1\n";
 const output=join(root,"cloudflare-output");
+try {
+  const pid=Number(await readFile(join(root,".cloudflare-preview.lock"),"utf8"));
+  if(Number.isSafeInteger(pid)&&pid>0) {
+    let active=true;try{process.kill(pid,0);}catch(error){if(error.code==="ESRCH")active=false;else throw error;}
+    if(active) throw new Error("Stop the local Cloudflare preview before rebuilding its files.");
+  }
+}catch(error){if(error.code!=="ENOENT")throw error;}
 async function safeRemove(path,prefix) {
   const actual=await realpath(path);
   if(dirname(actual)!==root||!basename(actual).startsWith(prefix)||(await readFile(join(actual,".generated-by-agristore"),"utf8"))!==marker) throw new Error("Refusing to remove an unrecognized build directory.");
-  await rm(actual,{recursive:true});
+  await rm(actual,{recursive:true,maxRetries:3,retryDelay:250});
 }
 async function files(path) {
   const result=[];
@@ -56,7 +63,7 @@ try {
   await build({entryPoints:[join(app,"lib/cloudflare-host.ts")],outfile:join(temporary,"host.mjs"),bundle:true,format:"esm",platform:"node"});
   const {pagesHeaders}=await import(pathToFileURL(join(temporary,"host.mjs")).href);
   await writeFile(join(site,"_headers"),pagesHeaders(backend.url));
-  await writeFile(join(site,"_routes.json"),JSON.stringify({version:1,include:["/api/health"],exclude:[]}));
+  await writeFile(join(site,"_routes.json"),JSON.stringify({version:1,include:["/api/health","/_worker.js","/_headers","/_routes.json"],exclude:[]}));
   const assets={};
   for(const file of await files(site)) {
     const rel=relative(site,file).split(sep).join("/");

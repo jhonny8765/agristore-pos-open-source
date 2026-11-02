@@ -21,6 +21,7 @@ apps/web/public/offline.html
 cloudflare-output/
 .cloudflare-build-*/
 .wrangler/
+.cloudflare-preview.lock
 
 .vercel
 .env*

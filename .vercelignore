@@ -10,3 +10,4 @@ coverage/
 cloudflare-output/
 .cloudflare-build-*/
 .wrangler/
+.cloudflare-preview.lock

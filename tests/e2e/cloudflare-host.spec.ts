@@ -11,8 +11,7 @@ test("Cloudflare routes only the health Worker, fails closed without a backend, 
   expect(first.headers()["x-frame-options"]).toBe("DENY");
   expect((await request.head("/api/health")).status()).toBe(503);
   expect((await request.post("/api/health")).status()).toBe(405);
-  // Wrangler may expose _routes.json; it contains only the public route map.
-  for(const path of ["/_worker.js","/_headers","/.env","/app/page.tsx","/does-not-exist"]) expect((await request.get(path)).status(),path).toBe(404);
+  for(const path of ["/_worker.js","/_headers","/_routes.json","/.env","/app/page.tsx","/does-not-exist"]) expect((await request.get(path)).status(),path).toBe(404);
   const root=await request.get("/");expect(root.status()).toBe(200);expect(root.headers()["cache-control"]).toBe("no-cache");
   const sw=await request.get("/sw.js");expect(sw.status()).toBe(200);expect(sw.headers()["cache-control"]).toContain("no-store");
 });
