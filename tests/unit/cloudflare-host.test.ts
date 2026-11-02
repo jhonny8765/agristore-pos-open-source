@@ -17,6 +17,14 @@ describe("Cloudflare serves a live, private health check",()=>{
     const response=await cloudflareHealth(new Request("https://pos.example/api/health",{method:"HEAD"}),"https://backend.example","sb_publishable_TEST","TEST",fetcher);
     expect(response.status).toBe(200);expect(await response.text()).toBe("");expect(fetcher).toHaveBeenCalledOnce();
   });
+  it("uses Workers-supported manual redirects and never follows an upstream redirect",async()=>{
+    const fetcher=vi.fn(async(_input:RequestInfo|URL,init?:RequestInit)=>{
+      expect(init?.redirect).toBe("manual");expect(init?.cache).toBe("no-store");
+      return new Response(null,{status:302,headers:{Location:"https://foreign.example"}});
+    });
+    const response=await cloudflareHealth(new Request("https://pos.example/api/health"),"https://backend.example","sb_publishable_TEST","TEST",fetcher);
+    expect(response.status).toBe(503);expect(fetcher).toHaveBeenCalledOnce();
+  });
   it.each(["POST","PUT","DELETE","OPTIONS"])("rejects %s without invoking the database",async method=>{
     const fetcher=vi.fn();
     const response=await cloudflareHealth(new Request("https://pos.example/api/health",{method}),undefined,undefined,"TEST",fetcher);

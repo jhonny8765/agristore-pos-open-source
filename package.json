@@ -28,7 +28,7 @@
     "audit:production": "npm audit --omit=dev --audit-level=low --fetch-retries=0 --fetch-timeout=30000",
     "audit:dependencies": "npm audit --audit-level=high --fetch-retries=0 --fetch-timeout=30000",
     "build:cloudflare": "node scripts/build-cloudflare.mjs",
-    "preview:cloudflare": "wrangler pages dev cloudflare-output/site --ip 127.0.0.1 --port 3100 --compatibility-date 2026-11-02 --show-interactive-dev-session=false --env-file scripts/cloudflare-preview.env"
+    "preview:cloudflare": "node scripts/preview-cloudflare.mjs"
   },
   "overrides": {
     "workbox-build": {
